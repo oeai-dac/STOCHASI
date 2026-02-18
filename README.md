@@ -72,17 +72,6 @@ Available in PNG and SVG formats.
 - **Hypothesis Testing**: Evaluate if assemblages match hypothesized settlement histories
 - **Sensitivity Analysis**: Explore parameter effects on outcomes
 
-## Terra Sigillata Categories (Default)
-
-| Code | Production Center | Period | Region |
-|------|-------------------|--------|--------|
-| IT | Italian | 30 BC – 100 AD | Italy |
-| LG | La Graufesenque | 20 – 120 AD | Southern Gaul |
-| BA | Banassac | 80 – 160 AD | Southern Gaul |
-| MG | Central Gaulish | 120 – 200 AD | Central Gaul |
-| RZ | Rheinzabern | 150 – 280 AD | Germania Superior |
-
-Custom categories can be defined for any artifact classification system.
 
 ## Platform Support
 
