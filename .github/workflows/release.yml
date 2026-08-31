@@ -1,0 +1,299 @@
+# Erzeugt die Installationspakete für alle Plattformen und hängt sie an einen
+# Entwurf eines GitHub-Release.
+#
+# Auslösen durch einen Versions-Tag:
+#     npm version 2.0.1        # setzt package.json und legt den Tag an
+#     git push --follow-tags
+#
+# Das Release wird als ENTWURF angelegt: So lassen sich die Dateien vorher
+# herunterladen und prüfen, und der Begleittext kann in Ruhe geschrieben werden.
+# Erst das Veröffentlichen macht es für Nutzer sichtbar.
+#
+# Es wird bewusst NICHT signiert (weder Apple noch Windows) — siehe
+# docs/INSTALLATION.md, das die Sicherheitsmeldungen erklärt. Sobald
+# Zertifikate vorliegen, genügt es, hier die entsprechenden Secrets zu setzen;
+# electron-builder greift sie selbsttätig auf.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: Linux (AppImage, deb, rpm)
+            command: npm run dist:linux -- --publish never
+          - os: windows-latest
+            label: Windows (Installer, portabel)
+            command: npm run dist:win -- --publish never
+          # Die macos-latest-Runner laufen selbst auf Apple Silicon, das dmg
+          # entsteht also nativ für arm64. Für Intel-Macs wird bewusst kein
+          # Paket gebaut — dort verweist die Anleitung auf die Web-Fassung.
+          - os: macos-latest
+            label: macOS (Apple Silicon)
+            command: npm run dist:mac -- --publish never
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Das rpm-Ziel ruft `rpmbuild` auf, das auf dem Ubuntu-Runner nicht
+      # vorinstalliert ist. Ohne diesen Schritt bricht der Linux-Bau ab,
+      # nachdem AppImage und deb bereits fertig sind.
+      - name: rpmbuild bereitstellen (nur Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Testsuite
+        run: npm test
+
+      # `--publish never` ist nicht optional: Sobald ein Tag im Spiel ist, will
+      # electron-builder die Dateien von sich aus zu GitHub Releases hochladen
+      # und bricht ohne GH_TOKEN ab — nachdem es die Pakete bereits fertig
+      # gebaut hat. Das Veröffentlichen ist hier aber ausdrücklich Sache des
+      # nachgelagerten Jobs, der einen einzigen Entwurf anlegt.
+      - name: Installationspakete bauen
+        run: ${{ matrix.command }}
+        env:
+          # Ohne Zertifikat gar nicht erst versuchen zu signieren.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      # Nur die auslieferbaren Dateien einsammeln — nicht das entpackte
+      # Verzeichnis, das electron-builder daneben stehen lässt.
+      #
+      # Die .blockmap-Dateien bleiben bewusst draußen: electron-builder legt sie
+      # für Delta-Downloads beim Auto-Update an, und STOCHASI bietet kein
+      # Auto-Update. Am Release hingen sie nur als erklärungsbedürftiger Ballast
+      # neben den Paketen.
+      - name: Pakete als Artefakt sichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: pakete-${{ matrix.os }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.exe
+            release/*.dmg
+
+
+  # ---------------------------------------------------------------- Pakettest
+  #
+  # Bis hierher ist nur belegt, dass sich die Pakete BAUEN lassen. Diese Jobs
+  # installieren sie und starten die installierte Anwendung — jeweils auf dem
+  # System, für das sie gedacht ist. Der Selbsttest läuft dann nicht mehr gegen
+  # den Quelltext, sondern gegen das, was beim Nutzer ankommt: das asar-Archiv,
+  # die mitgepackten Schriften, das app://-Schema, die Modul-Worker.
+  #
+  #
+  # Was diese Jobs NICHT leisten: Sie bekommen weder SmartScreen noch Gatekeeper
+  # zu sehen. Beide Warnungen erscheinen erst, wenn ein Mensch die Datei aus dem
+  # Netz lädt — das bleibt von Hand zu prüfen.
+
+  test-appimage:
+    name: Test — AppImage
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pakete-ubuntu-latest
+          path: pakete
+
+      # Zum Einhängen bräuchte das AppImage FUSE, das auf dem Runner fehlt.
+      # `--appimage-extract` packt es stattdessen aus; gestartet wird über
+      # AppRun dieselbe Programmdatei, die auch beim Einhängen liefe.
+      - name: Auspacken und starten
+        run: |
+          set -euo pipefail
+          APP=$(ls pakete/*.AppImage)
+          chmod +x "$APP"
+          "$APP" --appimage-extract > /dev/null
+          sudo chown root:root squashfs-root/chrome-sandbox
+          sudo chmod 4755 squashfs-root/chrome-sandbox
+          xvfb-run -a env STOCHASI_SMOKE=1 ./squashfs-root/AppRun
+
+  test-deb:
+    name: Test — deb (Ubuntu)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pakete-ubuntu-latest
+          path: pakete
+
+      # Aufgerufen wird bewusst `stochasi` ohne Pfad: Damit ist zugleich belegt,
+      # dass das postinst-Skript den Verweis in /usr/bin angelegt hat.
+      - name: Installieren und starten
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ./pakete/stochasi_*_amd64.deb
+          xvfb-run -a env STOCHASI_SMOKE=1 stochasi
+
+  test-rpm:
+    name: Test — rpm (Fedora)
+    needs: build
+    runs-on: ubuntu-latest
+    # Ubuntu kann kein rpm installieren. Der Fedora-Container liefert das
+    # System, für das das Paket gedacht ist — bisher war das rpm auf keinem
+    # einzigen laufenden System je gestartet worden.
+    #
+    # Die beiden Optionen gleichen eine Eigenheit des Containers aus, nicht des
+    # Pakets: Chromiums Sandbox legt PID- und Netzwerk-Namensräume an, was der
+    # Docker-Voreinstellung verwehrt ist ("Failed to move to new namespace").
+    # Auf einem gewöhnlichen Fedora-Desktop ist das erlaubt; ohne die Rechte
+    # prüfte dieser Job den Container statt das rpm.
+    container:
+      image: fedora:latest
+      options: --security-opt seccomp=unconfined --cap-add SYS_ADMIN
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pakete-ubuntu-latest
+          path: pakete
+
+      - name: Installieren und starten
+        run: |
+          set -euo pipefail
+          # --nogpgcheck: Das Paket ist nicht signiert, das ist bekannt und gewollt.
+          dnf install -y --nogpgcheck ./pakete/stochasi-*.x86_64.rpm xorg-x11-server-Xvfb
+          test -x /opt/STOCHASI/stochasi
+
+          # Zum Mitlesen: Welche Rechte das Paket-Skript der Sandbox gegeben
+          # hat, entscheidet es selbst — je nachdem, ob User-Namensräume zur
+          # Verfügung stehen. Hier wird nichts nachgebessert, sonst prüfte der
+          # Job seine eigene Nachbesserung statt das Paket.
+          ls -l /opt/STOCHASI/chrome-sandbox
+
+          # Im Container ist root der Normalfall, aber Chromium verweigert als
+          # root den Start mit Sandbox. Also ein gewöhnlicher Benutzer, wie ihn
+          # auch ein Mensch hätte.
+          useradd -m tester
+          runuser -u tester -- env HOME=/home/tester STOCHASI_SMOKE=1 \
+            xvfb-run -a /opt/STOCHASI/stochasi
+
+  test-win:
+    name: Test — Windows (Installer und portabel)
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pakete-windows-latest
+          path: pakete
+
+      # Die installierte .exe hängt am GUI-Subsystem und schreibt nicht in die
+      # Konsole des Aufrufers. Ohne STOCHASI_SMOKE_REPORT bliebe hier nur der
+      # Exit-Code, und im Fehlerfall wüsste niemand, welche Prüfung fiel.
+      - name: Installer still ausführen und starten
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $setup = (Get-ChildItem pakete\*Setup*.exe)[0].FullName
+          # /S ist der stille Modus des NSIS-Installers. perMachine ist false,
+          # die Anwendung landet deshalb im Benutzerprofil.
+          Start-Process -FilePath $setup -ArgumentList "/S" -Wait
+          $exe = "$env:LOCALAPPDATA\Programs\STOCHASI\STOCHASI.exe"
+          if (-not (Test-Path $exe)) { throw "Nach der Installation nicht gefunden: $exe" }
+
+          $env:STOCHASI_SMOKE = "1"
+          $env:STOCHASI_SMOKE_REPORT = "$PWD\bericht-installer.txt"
+          $p = Start-Process -FilePath $exe -Wait -PassThru
+          if (Test-Path $env:STOCHASI_SMOKE_REPORT) { Get-Content $env:STOCHASI_SMOKE_REPORT }
+          if ($p.ExitCode -ne 0) { throw "Selbsttest fehlgeschlagen (Exit-Code $($p.ExitCode))" }
+
+      # Die portable Fassung ist eine eigene Auslieferungsdatei und verdient
+      # eine eigene Prüfung: Sie entpackt sich beim Start selbst.
+      - name: Portable Fassung starten
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $portable = (Get-ChildItem pakete\*portable*.exe)[0].FullName
+          $env:STOCHASI_SMOKE = "1"
+          $env:STOCHASI_SMOKE_REPORT = "$PWD\bericht-portabel.txt"
+          $p = Start-Process -FilePath $portable -Wait -PassThru
+          if (Test-Path $env:STOCHASI_SMOKE_REPORT) { Get-Content $env:STOCHASI_SMOKE_REPORT }
+          if ($p.ExitCode -ne 0) { throw "Selbsttest fehlgeschlagen (Exit-Code $($p.ExitCode))" }
+
+  test-mac:
+    name: Test — macOS-dmg (Apple Silicon)
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pakete-macos-latest
+          path: pakete
+
+      # Genau der Weg, den die Installationsanleitung beschreibt: dmg öffnen,
+      # App nach /Applications ziehen, starten.
+      - name: dmg einhängen, App kopieren und starten
+        run: |
+          set -euo pipefail
+          DMG=$(ls pakete/*.dmg)
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint /Volumes/STOCHASITest
+          cp -R "/Volumes/STOCHASITest/STOCHASI.app" /Applications/
+          hdiutil detach /Volumes/STOCHASITest
+          STOCHASI_SMOKE=1 /Applications/STOCHASI.app/Contents/MacOS/STOCHASI
+
+  release:
+    name: Release-Entwurf anlegen
+    needs: [build, test-appimage, test-deb, test-rpm, test-win, test-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Alle Pakete herunterladen
+        uses: actions/download-artifact@v4
+        with:
+          path: pakete
+          merge-multiple: true
+
+      - name: Übersicht
+        run: ls -lh pakete
+
+      - name: Entwurf mit angehängten Dateien
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: pakete/*
+          body: |
+            ## Installation
+
+            Eine ausführliche, bebilderte Anleitung steht in
+            [docs/INSTALLATION.md](https://github.com/oeai-dac/STOCHASI/blob/main/docs/INSTALLATION.md).
+
+            | System | Datei |
+            |---|---|
+            | Windows | `STOCHASI-*-Setup-x64.exe` (Installer) oder `STOCHASI-*-portable-x64.exe` (ohne Installation) |
+            | macOS (Apple Silicon, M1–M4) | `STOCHASI-*-arm64.dmg` |
+            | Linux (universell) | `STOCHASI-*-x86_64.AppImage` |
+            | Debian, Ubuntu, Mint | `stochasi_*_amd64.deb` |
+            | Fedora, openSUSE, RHEL | `stochasi-*.x86_64.rpm` |
+
+            **Ohne Installation ausprobieren:** <https://oeai-dac.github.io/STOCHASI/>
+
+            > Die Pakete sind nicht digital signiert. Windows und macOS zeigen
+            > deshalb beim ersten Start eine Warnung. Die Installationsanleitung
+            > erklärt Schritt für Schritt, wie Sie sie bestätigen.

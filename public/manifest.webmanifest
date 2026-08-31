@@ -1,0 +1,19 @@
+{
+  "name": "STOCHASI v2 — Stochastische Simulation von Fundspektren",
+  "short_name": "STOCHASI",
+  "description": "Simuliert die Zusammensetzung archäologischer Fundspektren aus Marktangebot und Ersatzrate und datiert Fundkomplexe daraus zurück. Läuft vollständig im Browser; Daten bleiben lokal.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f4f2",
+  "theme_color": "#d22630",
+  "categories": ["education", "science", "productivity"],
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

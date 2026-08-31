@@ -1,0 +1,167 @@
+{
+  "name": "stochasi",
+  "version": "2.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "node scripts/ensure-electron.mjs",
+    "ensure-electron": "node scripts/ensure-electron.mjs",
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "test": "tsx src/core/model.test.ts && tsx src/core/theme.test.ts && tsx src/core/palette.test.ts && tsx src/core/shareLink.test.ts && tsx src/sim/stats.test.ts && tsx src/sim/simulate.test.ts && tsx src/sim/residual.test.ts && tsx src/sim/inverse.test.ts && tsx src/data/centres.test.ts && tsx src/core/io/importTable.test.ts && tsx src/core/io/migrateV1.test.ts && tsx src/charts/charts.test.ts && tsx src/export/export.test.ts && tsx src/i18n/i18n.test.ts && tsx src/pwa.test.ts",
+    "gen-icons": "node scripts/gen-icons.mjs",
+    "vendor-fonts": "node scripts/vendor-fonts.mjs",
+    "electron": "npm run build && electron .",
+    "electron:dev": "electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:dir": "npm run build && electron-builder --dir",
+    "smoke": "npm run build && STOCHASI_SMOKE=1 electron ."
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^18.3",
+    "@types/react-dom": "^18.3",
+    "@vitejs/plugin-react": "^4.3",
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
+    "tsx": "^4.23.1",
+    "typescript": "^5",
+    "vite": "^5.4"
+  },
+  "allowScripts": {
+    "electron@43.4.1": true
+  },
+  "productName": "STOCHASI",
+  "description": "Stochastische Simulation archäologischer Fundspektren und inverse Datierung von Fundkomplexen.",
+  "author": {
+    "name": "Christian Gugl",
+    "email": "ch.gugl@gmail.com",
+    "url": "https://github.com/oeai-dac"
+  },
+  "homepage": "https://github.com/oeai-dac/STOCHASI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oeai-dac/STOCHASI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/oeai-dac/STOCHASI/issues"
+  },
+  "main": "electron/main.js",
+  "build": {
+    "appId": "at.ac.oeaw.oeai.stochasi",
+    "productName": "STOCHASI",
+    "copyright": "Copyright © 2026 Christian Gugl / Österreichisches Archäologisches Institut (ÖAW)",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Science;Education",
+      "synopsis": "Simulation archäologischer Fundspektren",
+      "description": "Simuliert die Zusammensetzung archäologischer Fundspektren aus Marktangebot und Ersatzrate und datiert Fundkomplexe daraus zurück. Alle Daten bleiben auf dem eigenen Rechner.",
+      "desktop": {
+        "entry": {
+          "Keywords": "Archäologie;Terra Sigillata;Datierung;Simulation;Monte Carlo;Archaeology;",
+          "GenericName": "Fundspektren-Simulation"
+        }
+      },
+      "maintainer": "Christian Gugl <ch.gugl@gmail.com>",
+      "syncDesktopName": true,
+      "icon": "build/icons"
+    },
+    "deb": {
+      "priority": "optional",
+      "compression": "xz",
+      "packageCategory": "science"
+    },
+    "rpm": {
+      "compression": "xz"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "STOCHASI",
+      "artifactName": "${productName}-${version}-Setup-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.education",
+      "darkModeSupport": true,
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  },
+  "desktopName": "stochasi.desktop"
+}

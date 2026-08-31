@@ -1,0 +1,30 @@
+# Abhängigkeiten
+node_modules/
+
+# Build-Ergebnisse
+dist/
+dist-electron/
+release/
+.vite/
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editoren
+.vscode/
+.idea/
+*.swp
+
+# Logs & Laufzeit
+*.log
+npm-debug.log*
+.npm/
+
+# Lokale Umgebung / Geheimnisse
+.env
+.env.local
+*.p12
+*.pfx
+*.mobileprovision

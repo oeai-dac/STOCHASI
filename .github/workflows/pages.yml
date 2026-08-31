@@ -1,0 +1,64 @@
+# Veröffentlicht die Web-Fassung auf GitHub Pages:
+#     https://oeai-dac.github.io/STOCHASI/
+#
+# Das ist der einfachste Einstieg für Nutzer, die nichts installieren wollen
+# oder dürfen. Die App rechnet auch dort vollständig im Browser — es gibt kein
+# Backend, und es werden keine Daten übertragen.
+#
+# Einmalig einzurichten: Repository → Settings → Pages → Source: "GitHub Actions".
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Läuft ein Deploy bereits, wird es nicht abgebrochen, sondern der neue
+# Durchlauf wartet — sonst landet womöglich ein älterer Stand online.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Bauen und veröffentlichen
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      # `base: "./"` in vite.config.ts erzeugt durchgängig relative Pfade;
+      # Manifest und Service Worker lösen ebenfalls relativ auf. Deshalb läuft
+      # derselbe Build unter /STOCHASI/ wie unter einer eigenen Domain.
+      - name: Produktions-Build
+        run: npm run build
+
+      # `enablement: true` schaltet Pages beim ersten Lauf selbst auf die
+      # Quelle „GitHub Actions". Ohne das scheitert der Schritt mit
+      # „Get Pages site failed", solange niemand es von Hand in den
+      # Repo-Einstellungen gesetzt hat.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

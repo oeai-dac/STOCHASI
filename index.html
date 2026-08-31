@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#d22630" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="STOCHASI" />
+<meta name="description" content="Stochastische Simulation archäologischer Fundspektren und inverse Datierung von Fundkomplexen. Läuft vollständig lokal." />
+<title>ÖAI · STOCHASI v2</title>
+<script>
+/* Setzt Hell/Dunkel vor dem CSS-Paint (kein Aufblitzen). Spiegelt core/theme.ts. */
+(function(){try{var t=localStorage.getItem("stochasi.theme");
+if(t!=="light"&&t!=="dark"){t=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}
+document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+</script>
+<!-- Schriften werden lokal mitgeliefert (src/fonts.css); kein Fremdserver-Aufruf. -->
+</head>
+<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
+</html>

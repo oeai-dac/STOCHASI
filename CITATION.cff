@@ -1,0 +1,34 @@
+# Zitierhinweis im Citation File Format. GitHub zeigt daraus rechts auf der
+# Repository-Seite einen "Cite this repository"-Knopf an.
+cff-version: 1.2.0
+title: "STOCHASI"
+message: "Wenn Sie diese Software in einer Publikation verwenden, zitieren Sie sie bitte wie folgt. Bitte nennen Sie dabei auch die verwendeten Parameter — eine Datierung ohne Marktkurve, Ersatzrate und Seed lässt sich nicht nachprüfen."
+type: software
+authors:
+  - family-names: "Gugl"
+    given-names: "Christian"
+    affiliation: "Österreichisches Archäologisches Institut, Österreichische Akademie der Wissenschaften"
+repository-code: "https://github.com/oeai-dac/STOCHASI"
+url: "https://oeai-dac.github.io/STOCHASI/"
+abstract: >-
+  STOCHASI simuliert die Zusammensetzung archäologischer Fundspektren aus
+  Marktangebot und jährlicher Ersatzrate und rechnet die Simulation um: Aus den
+  Stückzahlen eines Fundkomplexes leitet es eine Wahrscheinlichkeitsverteilung
+  des Ablagerungsjahres ab, in die der Stichprobenumfang eingeht. Umgelagertes
+  Altmaterial lässt sich als Parameter mitführen und über mehrere Anteile
+  variieren, um die Belastbarkeit einer Datierung zu prüfen. Die Anwendung
+  rechnet vollständig auf dem Rechner der Nutzerin oder des Nutzers; Daten
+  werden nicht übertragen.
+keywords:
+  - archaeology
+  - terra sigillata
+  - Monte Carlo simulation
+  - Bayesian dating
+  - assemblage
+  - residuality
+  - Fundspektrum
+  - Datierung
+  - digital humanities
+license: MIT
+version: "2.0.0"
+date-released: "2026-08-31"
