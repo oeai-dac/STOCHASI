@@ -318,6 +318,108 @@ export function datingScene(series: readonly DatingSeries[], opts: ChartOptions 
   return fr.scene;
 }
 
+/* ── 6. Rangfolge: Fundkomplexe nach geschätztem Datum ── */
+export interface RankRow {
+  label: string;
+  result: DatingResult;
+  /** Weiteres Intervall über mehrere Residualanteile; ohne Angabe gilt das der Kurve. */
+  span?: [number, number];
+}
+
+/**
+ * Die Fundkomplexe, nach geschätztem Ablagerungsjahr sortiert, mit
+ * Intervallbalken.
+ *
+ * Das ist die Ansicht, die einen archäologischen Ertrag hat: sieben Insulae in
+ * einer Reihenfolge, aus der sich etwas über die Belegung sagen lässt.
+ *
+ * Genau darin liegt aber auch die Falle. Eine Sortierung erzeugt den Eindruck
+ * einer Abfolge, auch wenn die Intervalle sämtlich übereinanderliegen und die
+ * Daten die Reihenfolge gar nicht tragen. Das Diagramm zeigt das deshalb
+ * ausdrücklich: Gibt es ein Jahr, das mit *allen* Intervallen verträglich ist,
+ * wird dieser Schnittbereich als senkrechtes Band hinterlegt. Ist es zu sehen,
+ * ist die abgelesene Reihenfolge nicht belegt.
+ */
+export function rankScene(
+  rows: readonly RankRow[],
+  opts: ChartOptions & {
+    /** Beschriftung des Hinweises, wenn ein Datum zu allen Komplexen passt. */
+    overlapLabel?: string;
+    /** Ab dieser Fundzahl gilt ein Komplex als hinreichend belegt. */
+    smallSample?: number;
+  } = {},
+): Scene {
+  const th = opts.theme ?? LIGHT;
+  const usable = rows.filter((r) => !r.result.empty);
+  if (!usable.length) return frame({ ...opts, theme: th, xTicks: [0, 1], yTicks: [0, 1] }).scene;
+
+  const iv = (r: RankRow): [number, number] => r.span ?? r.result.hdi;
+  const sorted = [...usable].sort((a, b) => a.result.mode - b.result.mode || iv(a)[0] - iv(b)[0]);
+  const small = opts.smallSample ?? 30;
+
+  const years = usable[0].result.years;
+  const lo = Math.min(...sorted.map((r) => iv(r)[0]));
+  const hi = Math.max(...sorted.map((r) => iv(r)[1]));
+  // etwas Luft, aber nie über den gerechneten Zeitraum hinaus
+  const pad = Math.max(5, Math.round((hi - lo) * 0.08));
+  const xLo = Math.max(years[0], lo - pad), xHi = Math.min(years[years.length - 1], hi + pad);
+
+  const labels = sorted.map((r) => `${r.label} (n = ${r.result.n})`);
+  const labelW = Math.max(...labels.map((l) => textWidth(l, FONT.tick)), 40);
+  const rowH = 24;
+  const W = opts.width ?? 900;
+  const H = opts.height ?? 78 + sorted.length * rowH
+    + (opts.title ? FONT.title + 6 : 0) + (opts.subtitle ? FONT.tick + 4 : 0) + 25;
+
+  const fr = frame({
+    ...opts, width: W, height: H, theme: th,
+    xTicks: niceTicks(xLo, xHi, 7), xDomain: [xLo, xHi],
+    yTicks: [], yDomain: [0, 1],
+    xFormat: yearLabel, yFormat: () => "",
+    grid: "x", rail: "bottom", minLeft: 14 + labelW + 12,
+    xLabel: "Ablagerungsjahr n. Chr.",
+    legendItems: [
+      { label: `Intervall (${Math.round(sorted[0].result.level * 100)} %) mit wahrscheinlichstem Jahr`, color: th.accent },
+      { label: `weniger als ${small} Funde — Intervall entsprechend weit`, color: blend(th.accent, th.bg, 0.45) },
+    ],
+  });
+
+  // Schnittbereich aller Intervalle: ein Datum, das zu jedem Komplex passt
+  const capLo = Math.max(...sorted.map((r) => iv(r)[0]));
+  const capHi = Math.min(...sorted.map((r) => iv(r)[1]));
+  if (sorted.length > 1 && capLo <= capHi) {
+    const x0 = fr.xs(capLo), x1 = fr.xs(capHi);
+    fr.scene.rects.push({ x: Math.min(x0, x1), y: fr.plot.y, w: Math.max(1.5, Math.abs(x1 - x0)), h: fr.plot.h, c: blend(th.accent, th.bg, 0.10) });
+    if (opts.overlapLabel) {
+      fr.scene.texts.push({
+        x: (x0 + x1) / 2, y: fr.plot.y - 4,
+        s: opts.overlapLabel, size: FONT.tick, c: th.dim, anchor: "middle", rot: 0,
+      });
+    }
+  }
+
+  const step = fr.plot.h / sorted.length;
+  const barH = Math.min(9, step * 0.4);
+  sorted.forEach((r, i) => {
+    const cy = fr.plot.y + i * step + step / 2;
+    const weak = r.result.n < small;
+    const c = weak ? blend(th.accent, th.bg, 0.45) : th.accent;
+    const [a, b] = iv(r);
+    const x0 = fr.xs(a), x1 = fr.xs(b);
+    fr.scene.rects.push({ x: Math.min(x0, x1), y: cy - barH / 2, w: Math.max(1, Math.abs(x1 - x0)), h: barH, c });
+    // wahrscheinlichstes Jahr als Marke im Balken
+    const xm = fr.xs(r.result.mode);
+    fr.scene.paths.push({ pts: [xm, cy - barH, xm, cy + barH], stroke: th.text, width: 1.5 });
+    fr.scene.texts.push({
+      x: fr.plot.x - 10, y: cy + FONT.tick * 0.35,
+      s: labels[i], size: FONT.tick, c: weak ? th.dim : th.label, anchor: "end", rot: 0,
+    });
+  });
+
+  if (opts.footnote) note(fr, opts.footnote);
+  return fr.scene;
+}
+
 /** Bequemer Weg von `dateAcrossResidual` zu den Reihen des Datierungsdiagramms. */
 export function residualSeries(curves: readonly ResidualCurve[], base: RGB, th: PlotTheme = LIGHT): DatingSeries[] {
   const dashes: number[][] = [[], [5, 3], [2, 3], [8, 3, 2, 3]];

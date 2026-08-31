@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 import type { Assemblage, ProjectV2 } from "../core/model.js";
 import type { EnsembleStats } from "../sim/simulate.js";
 import type { DatingRow } from "../workers/sim.worker.js";
-import { marketScene, simulationScene, spectrumScene, deviationScene, datingScene, residualSeries, paramNote, type DatingSeries } from "../charts/charts.js";
+import { marketScene, simulationScene, spectrumScene, deviationScene, datingScene, rankScene, residualSeries, paramNote, type DatingSeries, type RankRow } from "../charts/charts.js";
 import { ChartCanvas, usePlotTheme, useWidth } from "./ChartCanvas.js";
 import { useI18n, useT } from "../i18n/I18nContext.js";
 import { yearLabel } from "../charts/plot.js";
@@ -149,8 +149,28 @@ export function CompareView({ project, ensemble }: ViewProps) {
 }
 
 /* ── Inverse Datierung ── */
-export function DatingView({ project, rows, busy, scan, onScan }: {
-  project: ProjectV2; rows: DatingRow[]; busy: boolean; scan: boolean; onScan: (v: boolean) => void;
+export type DatingMode = "curves" | "ranking";
+
+/**
+ * Fasst die Kurven eines Fundkomplexes zu einer Zeile der Rangfolge zusammen.
+ *
+ * Wird über mehrere Residualanteile gerechnet, ist die belastbare Aussage die
+ * Spanne über alle Kurven — nicht das Intervall zu einer einzelnen Annahme.
+ */
+export function toRankRow(r: DatingRow): RankRow {
+  return {
+    label: r.label,
+    result: r.curves[0].result,
+    span: r.curves.length > 1
+      ? [Math.min(...r.curves.map((cu) => cu.result.hdi[0])), Math.max(...r.curves.map((cu) => cu.result.hdi[1]))]
+      : undefined,
+  };
+}
+
+export function DatingView({ project, rows, busy, scan, onScan, mode, onMode }: {
+  project: ProjectV2; rows: DatingRow[]; busy: boolean;
+  scan: boolean; onScan: (v: boolean) => void;
+  mode: DatingMode; onMode: (m: DatingMode) => void;
 }) {
   const { t, lang } = useI18n();
   const th = usePlotTheme();
@@ -172,22 +192,44 @@ export function DatingView({ project, rows, busy, scan, onScan }: {
     }));
   }, [row, rows, scan, th, project.categories]);
 
-  const scene = useMemo(() => series.length && datingScene(series, {
-    theme: th, width: w, height: Math.max(340, Math.round(w * 0.48)),
-    title: t("dating.title"),
-    subtitle: scan && row ? t("dating.subtitle", { name: row.label, n: row.curves[0]?.result.n ?? 0 }) : undefined,
-    footnote: paramNote(project.params),
-  }), [series, th, w, t, scan, row, project.params]);
+  const canRank = rows.filter((r) => !r.curves[0].result.empty).length >= 2;
+  const showRanking = mode === "ranking" && canRank;
+
+  const scene = useMemo(() => {
+    if (showRanking) {
+      return rankScene(rows.map(toRankRow), {
+        theme: th, width: w, title: t("dating.ranking.title"),
+        overlapLabel: t("dating.ranking.overlapAll"), footnote: paramNote(project.params),
+      });
+    }
+    return series.length ? datingScene(series, {
+      theme: th, width: w, height: Math.max(340, Math.round(w * 0.48)),
+      title: t("dating.title"),
+      subtitle: scan && row ? t("dating.subtitle", { name: row.label, n: row.curves[0]?.result.n ?? 0 }) : undefined,
+      footnote: paramNote(project.params),
+    }) : null;
+  }, [showRanking, rows, series, th, w, t, scan, row, project.params]);
 
   if (!project.assemblages.length) return <div className="view"><Empty text={t("dating.needAssemblage")} /></div>;
   return (
     <div className="view" ref={ref}>
       <div className="view-bar">
-        <label className="chk">
-          <input type="checkbox" checked={scan} onChange={(e) => onScan(e.target.checked)} />
-          <span>{t("dating.residualScan")}</span>
-        </label>
-        {scan && (
+        <div className="seg" role="group" aria-label={t("dating.title")}>
+          <button className={"seg-b" + (!showRanking ? " on" : "")} onClick={() => onMode("curves")} aria-pressed={!showRanking}>
+            {t("dating.view.curves")}
+          </button>
+          <button className={"seg-b" + (showRanking ? " on" : "")} onClick={() => onMode("ranking")}
+            aria-pressed={showRanking} disabled={!canRank} title={canRank ? undefined : t("dating.ranking.needTwo")}>
+            {t("dating.view.ranking")}
+          </button>
+        </div>
+        {!showRanking && (
+          <label className="chk">
+            <input type="checkbox" checked={scan} onChange={(e) => onScan(e.target.checked)} />
+            <span>{t("dating.residualScan")}</span>
+          </label>
+        )}
+        {!showRanking && scan && (
           <label className="fld-inline">
             <span>{t("data.assemblage")}</span>
             <select value={row?.assemblageId ?? ""} onChange={(e) => setSel(e.target.value)}>
@@ -197,8 +239,10 @@ export function DatingView({ project, rows, busy, scan, onScan }: {
         )}
         {busy && <span className="busy">{t("app.loading")}</span>}
       </div>
-      {scene ? <ChartCanvas scene={scene} title={t("dating.title")} /> : <Empty text={t("app.loading")} />}
-      <p className="hint">{scan ? t("dating.residualScanHelp") : t("dating.caveat")}</p>
+      {scene ? <ChartCanvas scene={scene} title={showRanking ? t("dating.ranking.title") : t("dating.title")} /> : <Empty text={t("app.loading")} />}
+      <p className="hint">
+        {showRanking ? t("dating.ranking.help") : scan ? t("dating.residualScanHelp") : t("dating.caveat")}
+      </p>
 
       <h3 className="tbl-h">{t("dating.overview")}</h3>
       <div className="tbl-wrap">

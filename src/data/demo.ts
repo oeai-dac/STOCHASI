@@ -11,6 +11,11 @@
  * gilt für diesen Fundort. Sie ist keine allgemeine Lieferkurve.
  *
  * Erzeugt aus der v1-Konfiguration; bei Änderungen an der Datei neu erzeugen.
+ * Eine Abweichung von dort ist beabsichtigt: Die Zahl der Läufe steht auf 200
+ * statt auf den 100 von Version 1. Mit 100 Läufen ist die Datierungskurve beim
+ * ersten Blick noch sichtbar wellig, und diese Wellen liest man leicht als
+ * Struktur. Die 200 Läufe kosten rund 50 ms und zeigen die Kurve so, wie sie
+ * gemeint ist.
  */
 import type { ProjectV2 } from "../core/model.js";
 
@@ -177,7 +182,7 @@ const DATA = {
     "replacement": {},
     "replacementDefault": 0.1,
     "noiseSd": 2,
-    "runs": 100,
+    "runs": 200,
     "seed": 0,
     "settlementMode": false,
     "residual": 0,

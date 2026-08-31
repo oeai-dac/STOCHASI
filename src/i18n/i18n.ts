@@ -19,6 +19,12 @@ export const LANG_EVENT = "stochasi:lang";
 type Dict = Record<string, string>;
 
 const de: Dict = {
+  "dating.view.curves": "Kurven",
+  "dating.view.ranking": "Rangfolge",
+  "dating.ranking.title": "Fundkomplexe nach geschätztem Datum",
+  "dating.ranking.help": "Die Balken zeigen das Intervall, die Marke das wahrscheinlichste Jahr. Ist ein Bereich hinterlegt, passt ein einziges Datum zu allen Komplexen — dann trägt die Reihenfolge nicht.",
+  "dating.ranking.overlapAll": "ein Datum passt zu allen Komplexen",
+  "dating.ranking.needTwo": "Für eine Rangfolge werden mindestens zwei Fundkomplexe gebraucht.",
   "app.subtitle": "STOCHASTISCHE SIMULATION VON FUNDSPEKTREN · ÖSTERREICHISCHES ARCHÄOLOGISCHES INSTITUT",
   "app.loading": "Rechne…",
   "app.drop": "Projekt-, Markt- oder Fundkomplexdatei ablegen",
@@ -193,6 +199,12 @@ const de: Dict = {
 };
 
 const en: Dict = {
+  "dating.view.curves": "Curves",
+  "dating.view.ranking": "Ranking",
+  "dating.ranking.title": "Assemblages by estimated date",
+  "dating.ranking.help": "The bars show the interval, the tick the most likely year. Where a band is shaded, one single date fits every assemblage — and then the ordering carries no weight.",
+  "dating.ranking.overlapAll": "one date fits every assemblage",
+  "dating.ranking.needTwo": "A ranking needs at least two assemblages.",
   "app.subtitle": "STOCHASTIC SIMULATION OF FIND SPECTRA · AUSTRIAN ARCHAEOLOGICAL INSTITUTE",
   "app.loading": "Computing…",
   "app.drop": "Drop a project, market or assemblage file",

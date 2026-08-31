@@ -10,7 +10,7 @@ import { PRESET_V1, centreById } from "./data/centres.js";
 import { DEMO } from "./data/demo.js";
 import { Shell, type TabId } from "./components/Shell.js";
 import { Sidebar } from "./components/Sidebar.js";
-import { MarketView, SimView, YearView, CompareView, DatingView } from "./components/views.js";
+import { MarketView, SimView, YearView, CompareView, DatingView, toRankRow, type DatingMode } from "./components/views.js";
 import { DataView } from "./components/DataView.js";
 import { ExportMenu, type ExportPayload } from "./components/ExportMenu.js";
 import { simClient, isAbort } from "./workers/simClient.js";
@@ -18,7 +18,7 @@ import type { DatingRow } from "./workers/sim.worker.js";
 import { saveAutosave, loadAutosave, clearAutosave, type AutosaveRecord } from "./core/autosave.js";
 import { buildShareUrl, readShareFromHash } from "./core/shareLink.js";
 import { useI18n } from "./i18n/I18nContext.js";
-import { marketScene, simulationScene, spectrumScene, deviationScene, datingScene, residualSeries, paramNote } from "./charts/charts.js";
+import { marketScene, simulationScene, spectrumScene, deviationScene, datingScene, rankScene, residualSeries, paramNote } from "./charts/charts.js";
 import { LIGHT } from "./charts/plot.js";
 import { hexToRgb } from "./charts/scene.js";
 import { simulationAoa, marketAoa, assemblagesAoa, datingCurvesAoa, datingSummaryAoa, parametersAoa } from "./export/exportTable.js";
@@ -34,6 +34,7 @@ export default function App() {
   const [ensemble, setEnsemble] = useState<EnsembleStats | null>(null);
   const [rows, setRows] = useState<DatingRow[]>([]);
   const [scan, setScan] = useState(false);
+  const [datingMode, setDatingMode] = useState<DatingMode>("curves");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
@@ -221,12 +222,18 @@ export default function App() {
         };
       case "dating": {
         const flat = rows.map((r) => ({ label: r.label, result: r.curves[0].result }));
+        const ranking = datingMode === "ranking" && rows.filter((r) => !r.curves[0].result.empty).length >= 2;
         const series = scan && rows[0]
           ? residualSeries(rows[0].curves, hexToRgb("#a81d26"), LIGHT)
           : rows.map((r, i) => ({ label: `${r.label} (n = ${r.curves[0].result.n})`, result: r.curves[0].result, color: hexToRgb(project.categories[i % project.categories.length]?.color ?? "#a81d26") }));
+        // Exportiert wird, was auf dem Bildschirm steht — sonst bekäme man eine
+        // Abbildung, die man vorher nicht geprüft hat.
+        const scene = ranking
+          ? rankScene(rows.map(toRankRow), { ...opt, title: t("dating.ranking.title"), overlapLabel: t("dating.ranking.overlapAll") })
+          : series.length ? datingScene(series, { ...opt, height: 480, title: t("dating.title") }) : null;
         return {
-          scene: series.length ? datingScene(series, { ...opt, height: 480, title: t("dating.title") }) : null,
-          viewName: "datierung",
+          scene,
+          viewName: ranking ? "rangfolge" : "datierung",
           sheets: rows.length ? [{ name: "Datierung", aoa: datingSummaryAoa(flat) }, { name: "Kurven", aoa: datingCurvesAoa(flat) }, params] : [params],
         };
       }
@@ -240,7 +247,7 @@ export default function App() {
           ],
         };
     }
-  }, [project, tab, ensemble, rows, scan, t]);
+  }, [project, tab, ensemble, rows, scan, datingMode, t]);
 
   return (
     <>
@@ -279,7 +286,7 @@ export default function App() {
                 : tab === "sim" ? <SimView project={project} ensemble={ensemble} busy={busy} />
                   : tab === "year" ? <YearView project={project} ensemble={ensemble} busy={busy} />
                     : tab === "compare" ? <CompareView project={project} ensemble={ensemble} busy={busy} />
-                      : tab === "dating" ? <DatingView project={project} rows={rows} busy={busy} scan={scan} onScan={setScan} />
+                      : tab === "dating" ? <DatingView project={project} rows={rows} busy={busy} scan={scan} onScan={setScan} mode={datingMode} onMode={setDatingMode} />
                         : <DataView project={project} onProject={updateProject} />
             )}
           </main>

@@ -81,7 +81,10 @@ accounted for — 77 sherds and 770 sherds give visibly different intervals.
   depends on that unknown at all.
 - **Replacement rates per category.** Different wares leave circulation at
   different speeds.
-- **Several assemblages at once**, compared in one table and one figure.
+- **Several assemblages at once**, compared in one table and, in the ranking
+  view, sorted by estimated date with interval bars. Where a single year is
+  consistent with every assemblage, that range is shaded — so a sorted list
+  cannot pass itself off as a sequence the data do not support.
 - **36 production centres** as a reference list, grouped by region with rough
   production periods — Montans, Trier, Sinzig, La Madeleine,
   Chémery-Faulquemont, the Pannonian and local wares, African Red Slip and the
@@ -224,8 +227,10 @@ sichtbar verschiedene Intervalle.
   die Datierung von dieser Unbekannten überhaupt abhängt.
 - **Ersatzraten je Kategorie.** Verschiedene Warenarten scheiden verschieden
   schnell aus dem Umlauf aus.
-- **Mehrere Fundkomplexe gleichzeitig**, verglichen in einer Tabelle und einer
-  Abbildung.
+- **Mehrere Fundkomplexe gleichzeitig**, verglichen in einer Tabelle und, in der
+  Rangfolge, nach geschätztem Datum sortiert mit Intervallbalken. Passt ein
+  einziges Jahr zu allen Komplexen, wird dieser Bereich hinterlegt — damit eine
+  Sortierung sich nicht als Abfolge ausgeben kann, die die Daten nicht tragen.
 - **36 Produktionszentren** als Referenzliste, nach Regionen gruppiert und mit
   groben Produktionszeiträumen — darunter Montans, Trier, Sinzig, La Madeleine,
   Chémery-Faulquemont, die pannonisch-lokalen Waren, African Red Slip und die

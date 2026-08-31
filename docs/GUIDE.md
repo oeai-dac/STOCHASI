@@ -622,15 +622,33 @@ when most of them are within the range the model itself considers ordinary.
 
 ### 11.6 Dating
 
-The posterior curve over the years, with the 95 % interval shaded and the mode
-marked. Below it, a table across all assemblages: sample size, mode, expected
-value, interval and width.
+Two views of the same computation, switched at the top left.
 
-Two modes. Unticked, one curve per assemblage — this is the direct comparison
-between contexts. Ticked (*Compute across several residual shares*), four curves
-for one assemblage at 0, 10, 20 and 30 % residuality. In the second mode the
-overview table reports the span across all four curves, because that, not the
-interval from any single assumption, is the defensible statement.
+**Curves.** The posterior over the years, with the 95 % interval shaded and the
+mode marked. Unticked, one curve per assemblage — the direct comparison between
+contexts. Ticked (*Compute across several residual shares*), four curves for one
+assemblage at 0, 10, 20 and 30 % residuality.
+
+**Ranking.** The assemblages sorted by estimated date, each with an interval bar
+and a tick at the most likely year. This is where several contexts turn into a
+sequence, and it is the figure that belongs in a publication about the
+occupation of a site.
+
+It also carries the method's most seductive error, so the view is built to
+expose it. A sorted list reads as a sequence whatever the intervals do; with
+small samples they will overlap almost completely and support no order at all.
+STOCHASI therefore computes the **intersection of all the intervals**. If it is
+non-empty — if some single year is consistent with every assemblage — that range
+is shaded behind the bars and labelled. Seeing that band means the ordering in
+front of you is an artefact of sorting, not a finding.
+
+Assemblages below 30 finds are drawn in a paler tone, and the ranking is
+disabled below two usable assemblages. With the residual scan on, the bars show
+the span across all four residual shares rather than the interval from one
+assumption.
+
+Below both views, a table across all assemblages: sample size, mode, expected
+value, interval and width — likewise using the wider span when the scan is on.
 
 A warning appears when any assemblage has fewer than 30 finds. It says the
 interval is wide because the evidence is thin, not because the computation is
@@ -702,6 +720,10 @@ document alone.
   width, level, method, and which categories were actually present.
 - **Dating (curves)** — one row per year, one column per assemblage, giving the
   posterior probability. Sums to 1 down each column.
+
+The image export always follows the view you are looking at: with *Ranking*
+selected you get the ranking figure, otherwise the curves. Exporting a figure
+you have not seen would rather defeat the purpose of looking at it first.
 
 ---
 
@@ -837,7 +859,9 @@ electron/      main process, preload, self-test
 ```
 
 The test suite is framework-free — plain TypeScript files run with `tsx`, each
-printing its own results. `npm test` runs all of them.
+printing its own results. `npm test` runs all of them. The migration from
+version 1 is checked against the real version 1 configuration in `examples/`,
+not against a reconstruction of one.
 
 ---
 
@@ -882,6 +906,13 @@ the analytic one is the default for exactly this reason (§6.5).
 **The dating interval is implausibly narrow.** Almost always percentages
 imported as counts. Check the Data view: the totals should be your actual sherd
 counts.
+
+**The ranking view is greyed out.** It needs at least two assemblages with
+finds in them.
+
+**All the bars in the ranking overlap.** That is the answer, not a fault: the
+samples are too small to order the contexts. The shaded band marks the years
+consistent with every one of them.
 
 **All categories are red in the Comparison view.** The simulation and the
 evidence disagree across the board. Usually the comparison year is wrong, or the

@@ -211,3 +211,11 @@ input.num{text-align:right}
   .side{width:auto;border-right:none;border-bottom:1px solid var(--bd)}
   .content{overflow:visible}
 }
+
+/* Umschalter zwischen zwei gleichrangigen Ansichten (Kurven / Rangfolge) */
+.seg{display:inline-flex;border:1px solid var(--bd2);border-radius:var(--r);overflow:hidden}
+.seg-b{background:var(--bg);border:none;color:var(--tx3);padding:.28rem .7rem;font-size:.78rem;transition:color .12s,background .12s}
+.seg-b + .seg-b{border-left:1px solid var(--bd2)}
+.seg-b:hover:not(:disabled):not(.on){color:var(--accent2)}
+.seg-b.on{background:var(--bg4);color:var(--tx);font-weight:600}
+.seg-b:disabled{opacity:.45;cursor:default}

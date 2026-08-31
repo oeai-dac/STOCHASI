@@ -124,8 +124,16 @@ are marked in red. This is the view that says *where* the model and the evidence
 disagree — and the red marks matter, because without them every bar looks like a
 finding when most of them are just noise.
 
-**Dating** is the inverse calculation: a probability curve over the years, the
-most likely year, a 95 % interval, and a table across all your assemblages.
+**Dating** is the inverse calculation, in two forms. *Curves* gives the
+probability distribution over the years, the most likely year and a 95 %
+interval. *Ranking* sorts your assemblages by estimated date and draws their
+intervals as bars — the view that turns several contexts into a sequence.
+
+The ranking has a trap built into it, and the view is built to show it: a
+sorted list looks like a sequence even when every interval overlaps and the
+data support no order at all. So if there is a single year consistent with
+*all* the intervals, that range is shaded behind the bars. If you can see that
+band, the ordering you are reading off is not evidence.
 
 **Data** is where you edit: categories, the market curve at its reference years,
 and the assemblage counts.
@@ -220,6 +228,10 @@ several residual shares* and STOCHASI draws the curve for 0, 10, 20 and 30 %.
   assumption. Report it.
 - **The curves drift apart** → the dating is a function of an unknown. Report
   the span across all four curves, not the interval from one of them.
+
+The overview table and the ranking view both use that wider span automatically
+when the scan is on, so what you read there is the defensible figure rather
+than the one from a single assumption.
 
 For the example dataset the four curves sit almost on top of each other, and the
 overview table therefore reports the span across all of them rather than a

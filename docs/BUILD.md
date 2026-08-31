@@ -24,7 +24,7 @@ npm ci
 ```bash
 npm run dev        # Entwicklungsserver im Browser
 npm run build      # Typprüfung + Produktions-Build nach dist/
-npm test           # gesamte Testsuite (438 Prüfungen, framework-frei)
+npm test           # gesamte Testsuite (453 Prüfungen, framework-frei)
 npm run electron   # Build + Start im Desktop-Gehäuse
 npm run smoke      # Selbsttest der Desktop-Fassung
 ```

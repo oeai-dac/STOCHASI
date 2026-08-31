@@ -1,4 +1,4 @@
-import { simulationScene, marketScene, spectrumScene, deviationScene, datingScene, residualSeries, paramNote } from "./charts.js";
+import { simulationScene, marketScene, spectrumScene, deviationScene, datingScene, rankScene, residualSeries, paramNote, type RankRow } from "./charts.js";
 import { sceneToSVG, sceneToPDF, emptyScene, hexToRgb, blend } from "./scene.js";
 import { niceTicks, linear, yearLabel, LIGHT, DARK } from "./plot.js";
 import { simulate } from "../sim/simulate.js";
@@ -168,6 +168,73 @@ c("helles und dunkles Schema unterscheiden sich", LIGHT.bg[0] !== DARK.bg[0]);
   const minY = Math.min(...sc.paths.flatMap((p) => p.pts.filter((_, i) => i % 2 === 1)));
   c("Kurven bleiben senkrecht im Rahmen", minY >= 0 && maxY <= sc.h);
   c("Teilstriche außerhalb des Bereichs werden weggelassen", !sc.texts.some((t) => t.s === "300"));
+}
+
+
+/* ── Rangfolge ── */
+{
+  /** Baut Fundkomplexe, deren Spektren aus verschiedenen Jahren stammen. */
+  const at = (year: number, N: number, name: string) => {
+    const yi = E.years.indexOf(year), nc = E.ids.length;
+    const raw = E.ids.map((_, k) => (E.mean[yi * nc + k] / 100) * N);
+    const fl = raw.map(Math.floor);
+    let rest = N - fl.reduce((a, b) => a + b, 0);
+    raw.map((v, i) => [v - fl[i], i] as const).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (rest > 0) { fl[i]++; rest--; } });
+    return { label: name, result: dateAssemblage(E, Object.fromEntries(E.ids.map((id, i) => [id, fl[i]]))) };
+  };
+  const rows: RankRow[] = [at(210, 600, "spät"), at(140, 600, "früh"), at(175, 600, "mitte")];
+  const sc = rankScene(rows, { title: "Rangfolge", width: 900 });
+  c("Rangfolge: Szene gültig", sc.w > 0 && sceneToSVG(sc).includes("</svg>") && !sceneToSVG(sc).includes("NaN"));
+  c("Rangfolge: ein Balken je Komplex plus zwei Legendenfelder", sc.rects.length === 3 + 2);
+  c("Rangfolge: alle Komplexe beschriftet", rows.every((r) => sc.texts.some((t) => t.s.startsWith(r.label))));
+  c("Rangfolge: Stückzahl steht in der Beschriftung", sc.texts.some((t) => t.s.includes("n = 600")));
+  // Sortierung: der früheste Komplex steht oben
+  const ys = rows.map((r) => sc.texts.find((t) => t.s.startsWith(r.label))!.y);
+  c(`Rangfolge: nach Datum sortiert (früh oben)`, ys[1] < ys[2] && ys[2] < ys[0]);
+  // Balken liegen an der richtigen Stelle
+  const bars = sc.rects.slice(0, 3).map((r) => r.x);
+  c("Rangfolge: früher Komplex liegt links", Math.min(...bars) === sc.rects[0].x);
+  c("Rangfolge: PDF gültig", new TextDecoder("latin1").decode(sceneToPDF(sc)).trimEnd().endsWith("%%EOF"));
+}
+{
+  // Gut getrennte Komplexe: kein Jahr passt zu allen, also kein Schnittband.
+  const at = (year: number, N: number, name: string) => {
+    const yi = E.years.indexOf(year), nc = E.ids.length;
+    const cnt = Object.fromEntries(E.ids.map((id, k) => [id, Math.round((E.mean[yi * nc + k] / 100) * N)]));
+    return { label: name, result: dateAssemblage(E, cnt) };
+  };
+  const wide = rankScene([at(130, 2000, "a"), at(215, 2000, "b")], { overlapLabel: "ÜBERALL" });
+  c("kein gemeinsames Datum → kein Schnittband und kein Hinweis", !wide.texts.some((t) => t.s === "ÜBERALL"));
+
+  // Winzige Stichproben: die Intervalle überlappen, das Band muss erscheinen.
+  const tiny = rankScene([at(150, 6, "a"), at(190, 6, "b")], { overlapLabel: "ÜBERALL" });
+  c("gemeinsames Datum → Schnittband mit Hinweis", tiny.texts.some((t) => t.s === "ÜBERALL"));
+
+  // Gezählt statt indiziert: die Legende belegt beide Farben ohnehin je einmal,
+  // die Balken kommen obendrauf. Bei großen Stichproben also dreimal die kräftige
+  // Farbe, bei winzigen dreimal die blasse.
+  const count = (sc: ReturnType<typeof rankScene>, col: string) => sc.rects.filter((r) => r.c.join(",") === col).length;
+  const strong = LIGHT.accent.join(",");
+  const pale = blend(LIGHT.accent, LIGHT.bg, 0.45).join(",");
+  c(`große Stichproben werden kräftig gezeichnet (${count(wide, strong)}× kräftig, ${count(wide, pale)}× blass)`,
+    count(wide, strong) === 3 && count(wide, pale) === 1);
+  c(`kleine Stichproben werden blass gezeichnet (${count(tiny, strong)}× kräftig, ${count(tiny, pale)}× blass)`,
+    count(tiny, strong) === 1 && count(tiny, pale) === 3);
+}
+{
+  c("Rangfolge ohne Komplexe stürzt nicht ab", sceneToSVG(rankScene([])).includes("</svg>"));
+  c("Rangfolge mit nur leeren Komplexen stürzt nicht ab",
+    sceneToSVG(rankScene([{ label: "leer", result: dateAssemblage(E, {}) }])).includes("</svg>"));
+  const one = rankScene([{ label: "x", result: dateAssemblage(E, observed.counts) }], { overlapLabel: "ÜBERALL" });
+  c("bei einem einzigen Komplex gibt es keinen Schnitt zu zeigen", !one.texts.some((t) => t.s === "ÜBERALL"));
+}
+{
+  // Ein weiteres Intervall (Residualschar) muss den Balken verbreitern.
+  const r = dateAssemblage(E, observed.counts);
+  const narrow = rankScene([{ label: "x", result: r }]);
+  const broad = rankScene([{ label: "x", result: r, span: [r.hdi[0] - 20, r.hdi[1] + 20] }]);
+  const widest = (sc: ReturnType<typeof rankScene>) => Math.max(...sc.rects.map((x) => x.w));
+  c("span verbreitert den Balken", widest(broad) > widest(narrow));
 }
 
 console.log(`\n\x1b[1mErgebnis:\x1b[0m ${pass} bestanden, ${fail} fehlgeschlagen`);
