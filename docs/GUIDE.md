@@ -518,8 +518,8 @@ before using them in a publication.**
 | `AR` | Arezzo | 40 BC – AD 40 | established |
 | `PI` | Pisa | 20 BC – AD 60 | established |
 | `MI` | Central Italy (Mittelitalien) | 20 BC – AD 50 | approximate |
-| `PA` | Padana | AD 1 – 150 | established |
-| `TP` | Tardopadana | AD 150 – 400 | approximate |
+| `PA` | Padana | AD 1 – 50 | established |
+| `TP` | Tardopadana | AD 50 – 150 | established |
 | | **South Gaulish** | | |
 | `LG` | La Graufesenque | AD 20 – 120 | established |
 | `MT` | Montans | AD 20 – 150 | established |
@@ -556,14 +556,25 @@ before using them in a publication.**
 | `EA` | Eastern Sigillata A | 150 BC – AD 150 | established |
 | `EB` | Eastern Sigillata B | 25 BC – AD 150 | established |
 | `EC` | Çandarlı (ESC) | AD 50 – 200 | established |
-| `PS` | Pontische Sigillata | 50 BC – AD 150 | approximate |
-| `PH` | Phokäische Ware | AD 400 – 700 | approximate |
+| `PS` | Pontic sigillata | 50 BC – AD 150 | approximate |
+| `PH` | Phocaean ware | AD 400 – 700 | approximate |
 
 Compared with the nineteen provenances used in the Flavia Solva analysis, this
 list adds Montans, Trier, Sinzig, La Madeleine, Chémery-Faulquemont,
 Terre-Franche, Espalion, the Pannonian and local wares, the African Red Slip
 groups and the eastern sigillata families. Anything missing can be added as a
 custom category with its own code and colour.
+
+### 10.1 Changes to this list
+
+Changes are made by the author of the list, Ch. Gugl. Corrections to the periods
+are recorded here so that a figure differing from an earlier publication can be
+traced.
+
+| Date | Code | Was | Now | Reason / source |
+|---|---|---|---|---|
+| 2026-09-01 | `PA` | AD 1 – 150, established | AD 1 – 50, established | End of production brought forward; span narrowed to the range current in regional research |
+| 2026-09-01 | `TP` | AD 150 – 400, approximate | AD 50 – 150, established | Span brought forward to follow directly on `PA`; both limits now regarded as secure |
 
 ---
 
@@ -748,7 +759,7 @@ A defensible figure caption looks roughly like this:
 
 > Simulated stock in circulation, Insula XLI. Market curve after [reference],
 > replacement rate 10 %/year, σ = 2, 200 runs, seed 42, residual share 0.
-> STOCHASI 2.0.0.
+> STOCHASI 2.0.1.
 
 ---
 

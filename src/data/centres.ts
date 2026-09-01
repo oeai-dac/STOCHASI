@@ -47,8 +47,8 @@ export const CENTRES: Centre[] = [
   { id: "AR", name: "Arezzo",            group: "Italisch", color: "#7f1d1d", from: -40, to: 40,  certainty: "established" },
   { id: "PI", name: "Pisa",              group: "Italisch", color: "#991b1b", from: -20, to: 60,  certainty: "established" },
   { id: "MI", name: "Mittelitalien",     group: "Italisch", color: "#b91c1c", from: -20, to: 50,  certainty: "approximate" },
-  { id: "PA", name: "Padana",            group: "Italisch", color: "#c2410c", from: 1,   to: 150, certainty: "established" },
-  { id: "TP", name: "Tardopadana",       group: "Italisch", color: "#9a3412", from: 150, to: 400, certainty: "approximate" },
+  { id: "PA", name: "Padana",            group: "Italisch", color: "#c2410c", from: 1,   to: 50,  certainty: "established" },
+  { id: "TP", name: "Tardopadana",       group: "Italisch", color: "#9a3412", from: 50,  to: 150, certainty: "established" },
 
   // ── Südgallisch ──
   { id: "LG", name: "La Graufesenque",   group: "Südgallisch", color: "#f97316", from: 20,  to: 120, certainty: "established" },

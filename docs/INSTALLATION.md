@@ -19,12 +19,12 @@ Abschnitt „Assets" der neuesten Version.
 
 | Ihr System | Datei |
 |---|---|
-| **Windows 10 oder 11** | `STOCHASI-2.0.0-Setup-x64.exe` |
-| Windows, ohne Installation | `STOCHASI-2.0.0-portable-x64.exe` |
-| **macOS** mit Apple-Chip (M1–M4) | `STOCHASI-2.0.0-arm64.dmg` |
-| **Linux**, beliebige Distribution | `STOCHASI-2.0.0-x86_64.AppImage` |
-| Linux: Ubuntu 22.04+, Debian 12+, Mint | `stochasi_2.0.0_amd64.deb` |
-| Linux: Fedora, openSUSE, RHEL | `stochasi-2.0.0.x86_64.rpm` |
+| **Windows 10 oder 11** | `STOCHASI-2.0.1-Setup-x64.exe` |
+| Windows, ohne Installation | `STOCHASI-2.0.1-portable-x64.exe` |
+| **macOS** mit Apple-Chip (M1–M4) | `STOCHASI-2.0.1-arm64.dmg` |
+| **Linux**, beliebige Distribution | `STOCHASI-2.0.1-x86_64.AppImage` |
+| Linux: Ubuntu 22.04+, Debian 12+, Mint | `stochasi_2.0.1_amd64.deb` |
+| Linux: Fedora, openSUSE, RHEL | `stochasi-2.0.1.x86_64.rpm` |
 
 **Welchen Mac habe ich?** Apfel-Menü → „Über diesen Mac". Steht dort „Apple M1",
 „M2", „M3" oder „M4", ist die `arm64`-Datei die richtige. **Für Macs mit
@@ -57,7 +57,7 @@ gebaut — nachvollziehbar unter
 
 ### Mit Installation (empfohlen)
 
-1. Laden Sie `STOCHASI-2.0.0-Setup-x64.exe` herunter.
+1. Laden Sie `STOCHASI-2.0.1-Setup-x64.exe` herunter.
 2. Doppelklicken Sie die Datei.
 3. **Es erscheint ein blaues Fenster „Der Computer wurde durch Windows
    geschützt".** Klicken Sie auf den kleinen Text **„Weitere Informationen"** —
@@ -72,7 +72,7 @@ Ihr Benutzerprofil. Das funktioniert auch auf verwalteten Dienstrechnern.
 
 ### Ohne Installation
 
-Laden Sie `STOCHASI-2.0.0-portable-x64.exe` herunter und doppelklicken Sie sie.
+Laden Sie `STOCHASI-2.0.1-portable-x64.exe` herunter und doppelklicken Sie sie.
 Das Programm startet unmittelbar, ohne etwas zu installieren. Auch hier erscheint
 beim ersten Mal die oben beschriebene Windows-Meldung. Diese Variante lässt sich
 auf einen USB-Stick legen.
@@ -81,7 +81,7 @@ auf einen USB-Stick legen.
 
 ## macOS
 
-1. Laden Sie `STOCHASI-2.0.0-arm64.dmg` herunter (nur Macs mit Apple-Chip, siehe oben).
+1. Laden Sie `STOCHASI-2.0.1-arm64.dmg` herunter (nur Macs mit Apple-Chip, siehe oben).
 2. Doppelklicken Sie die Datei. Es öffnet sich ein Fenster mit dem
    STOCHASI-Symbol und dem Ordner „Programme".
 3. Ziehen Sie das STOCHASI-Symbol auf den Ordner **Programme**.
@@ -120,19 +120,19 @@ Markierung:
 
 Ein AppImage ist eine einzelne Datei, die ohne Installation läuft.
 
-1. Laden Sie `STOCHASI-2.0.0-x86_64.AppImage` herunter.
+1. Laden Sie `STOCHASI-2.0.1-x86_64.AppImage` herunter.
 2. Machen Sie die Datei ausführbar. Entweder im Dateimanager
    (Rechtsklick → Eigenschaften → Berechtigungen → „Als Programm ausführen"),
    oder im Terminal:
 
    ```bash
-   chmod +x STOCHASI-2.0.0-x86_64.AppImage
+   chmod +x STOCHASI-2.0.1-x86_64.AppImage
    ```
 
 3. Doppelklicken Sie die Datei, oder starten Sie sie im Terminal:
 
    ```bash
-   ./STOCHASI-2.0.0-x86_64.AppImage
+   ./STOCHASI-2.0.1-x86_64.AppImage
    ```
 
 Möchten Sie STOCHASI im Anwendungsmenü sehen, hilft das Werkzeug
@@ -156,7 +156,7 @@ sudo apt install libfuse2t64
 Oder Sie starten das AppImage ohne sie, indem es sich selbst entpackt:
 
 ```bash
-./STOCHASI-2.0.0-x86_64.AppImage --appimage-extract-and-run
+./STOCHASI-2.0.1-x86_64.AppImage --appimage-extract-and-run
 ```
 
 **2. Fehlermeldung zur Sandbox oder ein Fenster, das nicht erscheint**
@@ -166,7 +166,7 @@ STOCHASI, die auf Chromium aufbauen, brauchen dafür ein AppArmor-Profil — das
 lässt sich aus einem AppImage heraus aber nicht installieren. Behelf:
 
 ```bash
-./STOCHASI-2.0.0-x86_64.AppImage --no-sandbox
+./STOCHASI-2.0.1-x86_64.AppImage --no-sandbox
 ```
 
 **Beide Punkte entfallen beim `.deb`-Paket.** Es bringt das AppArmor-Profil mit
@@ -176,7 +176,7 @@ Linux Mint ist das `.deb` deshalb der bequemere Weg.
 ### Ubuntu 22.04+, Debian 12+, Linux Mint
 
 ```bash
-sudo apt install ./stochasi_2.0.0_amd64.deb
+sudo apt install ./stochasi_2.0.1_amd64.deb
 ```
 
 Das vorangestellte `./` ist wichtig — ohne den Punkt sucht `apt` ein Paket
@@ -185,8 +185,8 @@ dieses Namens in den Paketquellen und findet es nicht.
 ### Fedora, RHEL, openSUSE
 
 ```bash
-sudo dnf install ./stochasi-2.0.0.x86_64.rpm     # Fedora, RHEL
-sudo zypper install ./stochasi-2.0.0.x86_64.rpm  # openSUSE
+sudo dnf install ./stochasi-2.0.1.x86_64.rpm     # Fedora, RHEL
+sudo zypper install ./stochasi-2.0.1.x86_64.rpm  # openSUSE
 ```
 
 Nach der Installation erscheint STOCHASI im Anwendungsmenü unter

@@ -1,4 +1,5 @@
 import { CENTRES, GROUP_ORDER, PRESET_V1, PRESET_FLAVIA_SOLVA_IDS, centreById, centresByGroup, centresToCategories, suggestedPeriod } from "./centres.js";
+import { readFileSync } from "node:fs";
 
 let pass = 0, fail = 0; const F: string[] = [];
 function c(n: string, ok: boolean, d = "") { ok ? pass++ : (fail++, F.push(n)); console.log((ok ? "  \x1b[32m✓\x1b[0m " : "  \x1b[31m✗\x1b[0m ") + n + (d ? " — " + d : "")); }
@@ -48,6 +49,53 @@ c("centresToCategories ignoriert Unbekanntes", centresToCategories(["RZ", "ZZ"])
   const p = suggestedPeriod(["LG", "RZ"]);
   c(`Zeitvorschlag für La Graufesenque + Rheinzabern: ${p?.start}–${p?.end}`, p !== null && p.start === 20 && p.end === 260);
   c("Zeitvorschlag ohne Auswahl ist null", suggestedPeriod([]) === null);
+}
+
+/* ── Abgleich mit der Tabelle in docs/GUIDE.md ────────────────────────────────
+   Die Tabelle dort ist eine Handkopie von CENTRES. Ohne Prüfung laufen die
+   beiden bei der nächsten Korrektur auseinander, und niemand merkt es. Namen
+   werden nicht verglichen: das Dokument führt sie englisch, die Datei deutsch.
+   Die englischen Gruppennamen stehen ausschließlich in dieser Tabelle, deshalb
+   liegt die Zuordnung hier und nicht im Datenbestand. */
+{
+  const GROUP_EN: Record<string, string> = {
+    "Italisch": "Italian", "Südgallisch": "South Gaulish", "Mittelgallisch": "Central Gaulish",
+    "Ostgallisch": "East Gaulish", "Rätisch": "Raetian", "Pannonisch/lokal": "Pannonian / local",
+    "Nordafrikanisch": "North African", "Östlich": "Eastern",
+  };
+  /** Schreibweise der Tabelle, streng: „40 BC – AD 40“, „AD 1 – 50“. */
+  function period(from: number, to: number): string {
+    const a = from < 0 ? `${-from} BC` : `AD ${from}`;
+    const b = to < 0 ? `${-to} BC` : from < 0 ? `AD ${to}` : `${to}`;
+    return `${a} – ${b}`;
+  }
+
+  const md = readFileSync(new URL("../../docs/GUIDE.md", import.meta.url), "utf8").split("\n");
+  const head = md.findIndex((l) => l.startsWith("| Code | Centre | Production period | Basis |"));
+  const rows: string[][] = [];
+  for (let i = head + 2; i < md.length && md[i].startsWith("|"); i++)
+    rows.push(md[i].split("|").slice(1, -1).map((x) => x.trim()));
+
+  const groups = rows.filter((r) => !r[0]).map((r) => r[1].replace(/\*/g, ""));
+  const table = new Map(rows.filter((r) => r[0]).map((r) => [r[0].replace(/`/g, ""), r]));
+  // Gruppe jeder Zeile, damit ein Zentrum nicht unter der falschen Überschrift steht.
+  const rowGroup = new Map<string, string>();
+  let cur = "";
+  for (const r of rows) r[0] ? rowGroup.set(r[0].replace(/`/g, ""), cur) : (cur = r[1].replace(/\*/g, ""));
+
+  const missing = CENTRES.filter((x) => !table.has(x.id)).map((x) => x.id);
+  const extra = [...table.keys()].filter((id) => !CENTRES.some((x) => x.id === id));
+  const misplaced = CENTRES.filter((x) => table.has(x.id) && rowGroup.get(x.id) !== GROUP_EN[x.group]).map((x) => x.id);
+  c("GUIDE.md führt jedes Zentrum genau einmal, in der richtigen Gruppe",
+    head >= 0 && !missing.length && !extra.length && !misplaced.length && rows.length === CENTRES.length + GROUP_ORDER.length
+      && groups.join("|") === GROUP_ORDER.map((g) => GROUP_EN[g]).join("|"),
+    [missing.length && `fehlen: ${missing}`, extra.length && `unbekannt: ${extra}`, misplaced.length && `falsche Gruppe: ${misplaced}`].filter(Boolean).join("; "));
+
+  const badYears = CENTRES.filter((x) => table.get(x.id)?.[2] !== period(x.from, x.to)).map((x) => x.id);
+  c("GUIDE.md nennt dieselben Zeiträume", !badYears.length, badYears.join(", "));
+
+  const badBasis = CENTRES.filter((x) => table.get(x.id)?.[3] !== x.certainty).map((x) => x.id);
+  c("GUIDE.md nennt dieselbe Basis", !badBasis.length, badBasis.join(", "));
 }
 
 console.log(`\n\x1b[1mErgebnis:\x1b[0m ${pass} bestanden, ${fail} fehlgeschlagen`);
