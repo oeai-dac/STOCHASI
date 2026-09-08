@@ -43,7 +43,7 @@ step by step — no technical background required.
 
 | Document | What it covers |
 |---|---|
-| [**Quick Start Guide**](docs/QUICKSTART.md) | Getting STOCHASI, the model in three paragraphs, the six views, a first analysis. Ten minutes. |
+| [**Quick Start Guide**](docs/QUICKSTART.md) | Getting STOCHASI, the model in three paragraphs, the six views, a first analysis. Ten minutes. Also in German: [Kurzanleitung](docs/QUICKSTART.de.md). |
 | [**Complete Guide**](docs/GUIDE.md) | The full reference: the mathematics of the forward model and of the Dirichlet-multinomial dating, the residuality model, exact file formats, and a frank account of the method's limits. |
 | [**Installation**](docs/INSTALLATION.md) | Step-by-step installation per platform, security warnings, uninstalling *(German)*. |
 | [**Build**](docs/BUILD.md) | Building packages, release process, code signing *(German)*. |
@@ -190,7 +190,8 @@ führt Schritt für Schritt hindurch.
 
 | Dokument | Inhalt |
 |---|---|
-| [**Quick Start Guide**](docs/QUICKSTART.md) | Bezug, das Modell in drei Absätzen, die sechs Ansichten, eine erste Auswertung. Zehn Minuten. *(englisch)* |
+| [**Kurzanleitung**](docs/QUICKSTART.de.md) | Bezug, das Modell in drei Absätzen, die sechs Ansichten, eine erste Auswertung, das Lesen der Datierungskurve. Zehn Minuten. |
+| [Quick Start Guide](docs/QUICKSTART.md) | Dieselbe Anleitung auf Englisch. |
 | [**Complete Guide**](docs/GUIDE.md) | Die vollständige Referenz: die Mathematik des Vorwärtsmodells und der Dirichlet-Multinomial-Datierung, das Residualitätsmodell, die genauen Dateiformate und eine offene Darstellung der Grenzen. *(englisch)* |
 | [**Installation**](docs/INSTALLATION.md) | Installation je Plattform, Sicherheitswarnungen, Deinstallation. |
 | [**Bauen**](docs/BUILD.md) | Pakete bauen, Release-Ablauf, Signierung. |

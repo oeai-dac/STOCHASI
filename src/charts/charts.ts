@@ -274,7 +274,7 @@ export function deviationScene(
 /* ── 5. Inverse Datierung ── */
 export interface DatingSeries { label: string; result: DatingResult; color: RGB; dash?: number[]; }
 
-export function datingScene(series: readonly DatingSeries[], opts: ChartOptions & { markHdi?: boolean } = {}): Scene {
+export function datingScene(series: readonly DatingSeries[], opts: ChartOptions & { markHdi?: boolean; markMode?: boolean } = {}): Scene {
   const th = opts.theme ?? LIGHT;
   if (!series.length) return frame({ ...opts, theme: th, xTicks: [0, 1], yTicks: [0, 1] }).scene;
   const years = series[0].result.years;
@@ -303,16 +303,24 @@ export function datingScene(series: readonly DatingSeries[], opts: ChartOptions 
     for (let i = 0; i < years.length; i++) pts.push(fr.xs(years[i]), fr.ys(s.result.prob[i]));
     fr.scene.paths.push({ pts, stroke: s.color, width: 2, dash: s.dash });
   }
-  // Modus der ersten Reihe markieren
-  const first = series[0].result;
-  if (!first.empty) {
-    const x = fr.xs(first.mode);
-    fr.scene.paths.push({ pts: [x, fr.plot.y + fr.plot.h, x, fr.plot.y], stroke: series[0].color, width: 1, dash: [3, 3] });
-    fr.scene.texts.push({
-      x, y: fr.plot.y - 4,
-      s: `${yearLabel(first.mode)} (${yearLabel(first.hdi[0])}–${yearLabel(first.hdi[1])}, ${Math.round(first.level * 100)} %)`,
-      size: FONT.tick, c: th.text, anchor: "middle", rot: 0,
-    });
+  // Wahrscheinlichstes Jahr: eine strichlierte Senkrechte je Kurve, in deren
+  // Farbe. Die Textzeile mit Jahr und Intervall steht nur da, wenn eine einzige
+  // Kurve zu sehen ist — bei sieben Fundkomplexen lägen sieben Beschriftungen
+  // übereinander und wären keine mehr.
+  if (opts.markMode !== false) {
+    for (const s of series) {
+      if (s.result.empty) continue;
+      const x = fr.xs(s.result.mode);
+      fr.scene.paths.push({ pts: [x, fr.plot.y + fr.plot.h, x, fr.plot.y], stroke: s.color, width: 1, dash: [3, 3] });
+    }
+    const only = series.length === 1 ? series[0].result : null;
+    if (only && !only.empty) {
+      fr.scene.texts.push({
+        x: fr.xs(only.mode), y: fr.plot.y - 4,
+        s: `${yearLabel(only.mode)} (${yearLabel(only.hdi[0])}–${yearLabel(only.hdi[1])}, ${Math.round(only.level * 100)} %)`,
+        size: FONT.tick, c: th.text, anchor: "middle", rot: 0,
+      });
+    }
   }
   if (opts.footnote) note(fr, opts.footnote);
   return fr.scene;
@@ -324,6 +332,8 @@ export interface RankRow {
   result: DatingResult;
   /** Weiteres Intervall über mehrere Residualanteile; ohne Angabe gilt das der Kurve. */
   span?: [number, number];
+  /** Farbe des Fundkomplexes; erscheint als Punkt vor der Beschriftung. */
+  color?: RGB;
 }
 
 /**
@@ -354,6 +364,8 @@ export function rankScene(
   if (!usable.length) return frame({ ...opts, theme: th, xTicks: [0, 1], yTicks: [0, 1] }).scene;
 
   const iv = (r: RankRow): [number, number] => r.span ?? r.result.hdi;
+  /** Kantenlänge des Farbpunkts vor der Beschriftung. */
+  const DOT = 8;
   const sorted = [...usable].sort((a, b) => a.result.mode - b.result.mode || iv(a)[0] - iv(b)[0]);
   const small = opts.smallSample ?? 30;
 
@@ -376,7 +388,8 @@ export function rankScene(
     xTicks: niceTicks(xLo, xHi, 7), xDomain: [xLo, xHi],
     yTicks: [], yDomain: [0, 1],
     xFormat: yearLabel, yFormat: () => "",
-    grid: "x", rail: "bottom", minLeft: 14 + labelW + 12,
+    // Platz für den Farbpunkt vor der Beschriftung ist im linken Rand mitgerechnet.
+    grid: "x", rail: "bottom", minLeft: 14 + DOT + 6 + labelW + 12,
     xLabel: "Ablagerungsjahr n. Chr.",
     legendItems: [
       { label: `Intervall (${Math.round(sorted[0].result.level * 100)} %) mit wahrscheinlichstem Jahr`, color: th.accent },
@@ -414,6 +427,15 @@ export function rankScene(
       x: fr.plot.x - 10, y: cy + FONT.tick * 0.35,
       s: labels[i], size: FONT.tick, c: weak ? th.dim : th.label, anchor: "end", rot: 0,
     });
+    // Farbpunkt in der Farbe des Fundkomplexes — er stellt den Bezug zum
+    // Kurvendiagramm her. Die Balken bleiben einfarbig, denn dort bedeutet
+    // Blässe bereits etwas anderes, nämlich einen zu kleinen Komplex.
+    if (r.color) {
+      fr.scene.rects.push({
+        x: fr.plot.x - 10 - textWidth(labels[i], FONT.tick) - 6 - DOT, y: cy - DOT / 2,
+        w: DOT, h: DOT, c: r.color,
+      });
+    }
   });
 
   if (opts.footnote) note(fr, opts.footnote);

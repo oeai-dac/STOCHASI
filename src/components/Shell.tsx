@@ -46,11 +46,17 @@ const TABS: Array<{ id: TabId; labelKey: string; icon: string }> = [
   { id: "data", labelKey: "tab.data", icon: "▦" },
 ];
 
+/** Kurzanleitung auf GitHub, je Sprache. Im Desktop-Gehäuse öffnet sie der Browser. */
+const GUIDE_URL: Record<Lang, string> = {
+  de: "https://github.com/oeai-dac/STOCHASI/blob/main/docs/QUICKSTART.de.md",
+  en: "https://github.com/oeai-dac/STOCHASI/blob/main/docs/QUICKSTART.md",
+};
+
 export function Shell({ project, tab, onTab, onPickFile, onShare, exportMenu }: {
   project: ProjectV2 | null; tab: TabId; onTab: (t: TabId) => void;
   onPickFile: () => void; onShare?: () => void; exportMenu?: React.ReactNode;
 }) {
-  const t = useT();
+  const { t, lang } = useI18n();
   return (
     <>
       <header className="hdr">
@@ -59,7 +65,7 @@ export function Shell({ project, tab, onTab, onPickFile, onShare, exportMenu }: 
           <h1>STOCHASI{project ? ` · ${project.name}` : ""}</h1>
           <p>{t("app.subtitle")}</p>
         </div>
-        <span className="badge p2">v2.0</span>
+        <span className="badge p2">v2.1</span>
         {project && <span className="badge">{t("cat.count", { n: project.categories.length })}</span>}
         {exportMenu}
         {project && onShare && (
@@ -67,6 +73,10 @@ export function Shell({ project, tab, onTab, onPickFile, onShare, exportMenu }: 
             <span aria-hidden="true">⇗</span> {t("share.button")}
           </button>
         )}
+        <a className="sl" href={GUIDE_URL[lang]} target="_blank" rel="noreferrer"
+          title={t("header.guideTitle")}>
+          <span aria-hidden="true">?</span> {t("header.guide")}
+        </a>
         <LangToggle />
         <ThemeToggle />
         <button className="file-btn" onClick={onPickFile}>{t("header.loadFile")}</button>

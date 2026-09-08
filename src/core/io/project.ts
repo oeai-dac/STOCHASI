@@ -1,7 +1,7 @@
 /**
  * Projektdatei von STOCHASI 2 — lesen, schreiben, prüfen.
  *
- * Die Datei ist ein JSON mit `_meta.app = "STOCHASI"` und `_meta.version = "2.0"`.
+ * Die Datei ist ein JSON mit `_meta.app = "STOCHASI"` und `_meta.version = "2.1"`.
  * Sie enthält alles, was zur Wiederholung einer Auswertung nötig ist:
  * Kategorien, Marktkurve, Parameter und Fundkomplexe. Wer eine Zahl aus der
  * Publikation nachrechnen will, braucht nur diese eine Datei.
@@ -9,6 +9,7 @@
  * `readProject` nimmt auch v1-Dateien an und wandelt sie um.
  */
 import type { Assemblage, Category, MarketTable, ProjectV2, SimParams } from "../model.js";
+import { paletteColor } from "../palette.js";
 import { DEFAULT_NOISE, DEFAULT_REPLACEMENT, DEFAULT_RUNS, MAX_NOISE, MAX_RESIDUAL, MAX_RUNS, MAX_REPLACEMENT, MIN_RUNS } from "../model.js";
 import { isV1Config, migrateV1 } from "./migrateV1.js";
 
@@ -36,7 +37,7 @@ export function readProject(text: string, name = "Projekt"): ReadResult {
   const notes: string[] = [];
   const version = String(m.version ?? "");
   if (version && !version.startsWith("2"))
-    notes.push(`Die Datei nennt Version ${version}; sie wurde als 2.0 gelesen.`);
+    notes.push(`Die Datei nennt Version ${version}; sie wurde als 2.1 gelesen.`);
   return { project: sanitize(d, name, notes), notes, fromV1: false };
 }
 
@@ -111,21 +112,27 @@ export function sanitize(d: Any, fallbackName: string, notes: string[] = []): Pr
     for (const id of ids) { const v = Math.max(0, Number(rawCounts[id]) || 0); counts[id] = v; total += v; }
     const name = String(a.name ?? `Fundkomplex ${i + 1}`);
     if (total <= 0) { notes.push(`„${name}" enthält keine Funde und wurde übersprungen.`); return; }
-    assemblages.push({ id: String(a.id ?? `A${assemblages.length + 1}`), name, counts });
+    // Dateien der Fassung 2.0 kennen keine Farbe je Fundkomplex; sie bekommen
+    // hier eine aus der Palette, damit alte Projekte sofort richtig aussehen.
+    const color = String(a.color ?? "");
+    assemblages.push({
+      id: String(a.id ?? `A${assemblages.length + 1}`), name, counts,
+      color: /^#[0-9a-f]{6}$/i.test(color) ? color : paletteColor(assemblages.length),
+    });
   });
 
   let comparisonYear = Math.round(clamp(d.comparisonYear, startYear, endYear, Math.round((startYear + endYear) / 2)));
   if (comparisonYear < startYear || comparisonYear > endYear) comparisonYear = Math.round((startYear + endYear) / 2);
 
   return {
-    _meta: { app: "STOCHASI", version: "2.0", created: String(obj(d._meta).created ?? new Date().toISOString()) },
+    _meta: { app: "STOCHASI", version: "2.1", created: String(obj(d._meta).created ?? new Date().toISOString()) },
     name: String(d.name ?? fallbackName),
     categories, market, params, assemblages, comparisonYear,
   };
 }
 
 export function writeProject(p: ProjectV2): string {
-  return JSON.stringify({ ...p, _meta: { ...p._meta, app: "STOCHASI", version: "2.0" } }, null, 2);
+  return JSON.stringify({ ...p, _meta: { ...p._meta, app: "STOCHASI", version: "2.1" } }, null, 2);
 }
 
 /** Leeres, aber lauffähiges Projekt. */
@@ -134,7 +141,7 @@ export function emptyProject(categories: Category[], name = "Neues Projekt"): Pr
   const initial: Record<string, number> = {};
   for (const id of ids) initial[id] = 100 / Math.max(1, ids.length);
   return {
-    _meta: { app: "STOCHASI", version: "2.0", created: new Date().toISOString() },
+    _meta: { app: "STOCHASI", version: "2.1", created: new Date().toISOString() },
     name, categories,
     market: { years: [], shares: Object.fromEntries(ids.map((id) => [id, []])) },
     params: {

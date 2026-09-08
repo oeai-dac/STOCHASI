@@ -287,6 +287,13 @@ function buildMenu(win) {
       label: t("Hilfe", "Help"),
       submenu: [
         {
+          label: t("Kurzanleitung", "Quick start guide"),
+          click: () => shell.openExternal(t(
+            "https://github.com/oeai-dac/STOCHASI/blob/main/docs/QUICKSTART.de.md",
+            "https://github.com/oeai-dac/STOCHASI/blob/main/docs/QUICKSTART.md",
+          )),
+        },
+        {
           label: t("Handbuch (Website)", "Documentation (website)"),
           click: () => shell.openExternal("https://github.com/oeai-dac/STOCHASI"),
         },

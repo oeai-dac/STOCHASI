@@ -5,7 +5,8 @@ changes over time, and it works the same calculation backwards: given a counted
 assemblage, it asks which year of deposition would produce those counts.
 
 This guide takes about ten minutes. The [Complete Guide](GUIDE.md) covers the
-mathematics, the file formats and the limits of the method.
+mathematics, the file formats and the limits of the method. In German:
+[QUICKSTART.de.md](QUICKSTART.de.md).
 
 **Contents**
 
@@ -126,8 +127,15 @@ finding when most of them are just noise.
 
 **Dating** is the inverse calculation, in two forms. *Curves* gives the
 probability distribution over the years, the most likely year and a 95 %
-interval. *Ranking* sorts your assemblages by estimated date and draws their
-intervals as bars — the view that turns several contexts into a sequence.
+interval, one curve per assemblage in its own colour. *Ranking* sorts your
+assemblages by estimated date and draws their intervals as bars — the view that
+turns several contexts into a sequence.
+
+A row of buttons above the figure hides and shows individual curves, with *All*
+and *None* beside them; hidden assemblages stay in the table below, only faint.
+Each visible curve carries a dashed vertical at its most likely year, which the
+*Mode lines* tickbox turns off. The footnote of every figure names how many
+curves are hidden, so a figure cannot quietly claim more than it shows.
 
 The ranking has a trap built into it, and the view is built to show it: a
 sorted list looks like a sequence even when every interval overlaps and the
@@ -135,8 +143,8 @@ data support no order at all. So if there is a single year consistent with
 *all* the intervals, that range is shaded behind the bars. If you can see that
 band, the ordering you are reading off is not evidence.
 
-**Data** is where you edit: categories, the market curve at its reference years,
-and the assemblage counts.
+**Data** is where you edit: the project name, categories, the market curve at its
+reference years, and the assemblage counts with their colours.
 
 ---
 
@@ -173,6 +181,16 @@ The long format also works: columns `Type`/`Typ`/`Category` and
 **Counts, not percentages.** The dating uses the sample size: 77 sherds and 770
 sherds carry very different weight, and percentages throw that away. If STOCHASI
 sees fractional values it will say so.
+
+A column that matches none of the project's categories creates that category and
+is reported. It then sits in the market curve with zeros, waiting to be filled;
+without this the sherds would have dropped out silently and the dating would run
+on too small an N.
+
+If the project already held assemblages, a bar appears after loading offering
+**Replace existing** or **Append to existing**. Replacing is the default;
+appending is one click away while the bar is up, and it renumbers duplicate
+names so that two excavations with an "Insula I" each stay apart.
 
 Accepted file types: `.csv`, `.tsv`, `.xlsx`, `.xls`, and `.json` for STOCHASI
 projects (version 1 or 2).
@@ -254,6 +272,9 @@ you are working in dark mode — a dark figure is useless in print. And the
 exported figure is the same scene that is on your screen: there is no second,
 prettier rendering path.
 
+The table sheets stay complete even when curves are hidden in the figure; a
+column *im Diagramm* records which assemblages were shown.
+
 Every table export includes a **Parameter** sheet with the period, rates,
 scatter, residual share, number of runs and seed. Attach it to a figure and the
 run can be reproduced exactly.
@@ -285,6 +306,7 @@ Version 1 itself remains available on the
 - **[Complete Guide](GUIDE.md)** — the mathematics of the forward model, the
   Dirichlet-multinomial likelihood behind the dating, the residuality model,
   exact file formats, and a frank account of what the method cannot do.
+- **[QUICKSTART.de.md](QUICKSTART.de.md)** — this guide in German.
 - **[INSTALLATION.md](INSTALLATION.md)** — installation per platform *(German)*.
 - **[BUILD.md](BUILD.md)** — building and releasing *(German)*.
 - Questions and bug reports:

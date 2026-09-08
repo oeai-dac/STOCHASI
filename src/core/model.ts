@@ -12,6 +12,7 @@
  *
  * Dazwischen steht der Umlaufbestand, den die Simulation Jahr für Jahr fortschreibt.
  */
+import { paletteColor } from "./palette.js";
 
 export interface Category {
   /** Kurzkennung, wie sie in Tabellenspalten steht (z. B. „RZ"). */
@@ -36,6 +37,11 @@ export interface Assemblage {
   name: string;
   /** Absolute Stückzahlen je Kategorie. Fehlende Kategorien gelten als 0. */
   counts: Record<string, number>;
+  /**
+   * Farbe der Kurve als #rrggbb. Fehlt sie — in Dateien der Fassung 2.0 —,
+   * greift `assemblageColor` auf die Palette zurück.
+   */
+  color?: string;
 }
 
 export interface SimParams {
@@ -58,7 +64,8 @@ export interface SimParams {
 }
 
 export interface ProjectV2 {
-  _meta: { app: "STOCHASI"; version: "2.0"; created?: string };
+  /** `version` ist die Fassung des Dateiformats: 2.1 seit der Farbe je Fundkomplex. */
+  _meta: { app: "STOCHASI"; version: "2.0" | "2.1"; created?: string };
   name: string;
   categories: Category[];
   market: MarketTable;
@@ -66,6 +73,41 @@ export interface ProjectV2 {
   assemblages: Assemblage[];
   /** Jahr, für das Simulation und Fundkomplex im Vergleich gegenübergestellt werden. */
   comparisonYear: number;
+}
+
+/**
+ * Farbe eines Fundkomplexes, mit Rückfall auf die Palette.
+ *
+ * Die Farbe gehört zum Komplex, nicht zur Kategorie: Vor 2.1 bekam die Kurve
+ * des i-ten Komplexes die Farbe der i-ten Kategorie, womit dieselbe Farbe im
+ * Programm zweierlei bedeutete — einmal Rheinzabern, einmal Insula XLI.
+ */
+export function assemblageColor(a: Assemblage, index: number): string {
+  return /^#[0-9a-f]{6}$/i.test(a.color ?? "") ? (a.color as string) : paletteColor(index);
+}
+
+/**
+ * Fundkomplexe anhängen statt ersetzen.
+ *
+ * Ids und Namen der geladenen Komplexe können mit vorhandenen kollidieren — der
+ * Tabellenimport vergibt stur `A1, A2, …`, und zwei Grabungen haben schnell
+ * beide eine „Insula I". Kollidierende Ids werden neu vergeben, gleiche Namen
+ * durchnummeriert; die Farben setzen die vorhandene Reihe fort.
+ */
+export function appendAssemblages(existing: readonly Assemblage[], incoming: readonly Assemblage[]): Assemblage[] {
+  const ids = new Set(existing.map((a) => a.id));
+  const names = new Set(existing.map((a) => a.name));
+  const out = existing.slice();
+  incoming.forEach((a, k) => {
+    let id = a.id;
+    if (ids.has(id)) { let n = 2; while (ids.has(`${a.id}-${n}`)) n++; id = `${a.id}-${n}`; }
+    ids.add(id);
+    let name = a.name;
+    if (names.has(name)) { let n = 2; while (names.has(`${a.name} (${n})`)) n++; name = `${a.name} (${n})`; }
+    names.add(name);
+    out.push({ ...a, id, name, color: a.color ?? paletteColor(existing.length + k) });
+  });
+  return out;
 }
 
 export const MIN_RUNS = 10, MAX_RUNS = 500, DEFAULT_RUNS = 100;

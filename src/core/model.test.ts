@@ -1,4 +1,5 @@
-import { catIds, normalizeTo100, rateFor, yearRange, interpolateMarket, MAX_REPLACEMENT, type MarketTable, type SimParams } from "./model.js";
+import { catIds, normalizeTo100, rateFor, yearRange, interpolateMarket, assemblageColor, appendAssemblages, MAX_REPLACEMENT, type MarketTable, type SimParams } from "./model.js";
+import { OKABE_ITO } from "./palette.js";
 
 let pass = 0, fail = 0; const F: string[] = [];
 function c(n: string, ok: boolean, d = "") { ok ? pass++ : (fail++, F.push(n)); console.log((ok ? "  \x1b[32m✓\x1b[0m " : "  \x1b[31m✗\x1b[0m ") + n + (d ? " — " + d : "")); }
@@ -73,6 +74,33 @@ const ids = ["A", "B"];
   for (let y = 0; y < 101; y++) if (Math.abs(M[y * 2] + M[y * 2 + 1] - 100) > 1e-9) ok = false;
   c("jede interpolierte Jahreszeile summiert auf 100", ok);
   c("die Interpolation ist monoton", (() => { for (let y = 1; y < 101; y++) if (M[y * 2] > M[(y - 1) * 2] + 1e-9) return false; return true; })());
+}
+
+/* ── Farbe je Fundkomplex und Anhängen ── */
+{
+  const a = { id: "A1", name: "eins", counts: { A: 1 } };
+  c("ohne eigene Farbe greift die Palette", assemblageColor(a, 0) === OKABE_ITO[0]);
+  c("die Palette folgt der Reihenfolge", assemblageColor(a, 1) === OKABE_ITO[1]);
+  c("eine gesetzte Farbe gilt", assemblageColor({ ...a, color: "#123456" }, 0) === "#123456");
+  c("eine unsinnige Farbe fällt auf die Palette zurück", assemblageColor({ ...a, color: "rot" }, 2) === OKABE_ITO[2]);
+}
+{
+  const existing = [
+    { id: "A1", name: "Insula I", counts: { A: 1 }, color: "#123456" },
+    { id: "A2", name: "Insula II", counts: { A: 2 }, color: "#654321" },
+  ];
+  const incoming = [
+    { id: "A1", name: "Insula I", counts: { A: 3 } },
+    { id: "A9", name: "Insula IX", counts: { A: 4 } },
+  ];
+  const merged = appendAssemblages(existing, incoming);
+  c("Anhängen behält die vorhandenen Komplexe", merged.length === 4 && merged[0].id === "A1" && merged[0].counts.A === 1);
+  c("kollidierende Kennungen werden neu vergeben", new Set(merged.map((x) => x.id)).size === 4);
+  c("gleiche Namen werden unterschieden", merged[2].name === "Insula I (2)" && merged[3].name === "Insula IX");
+  c("die Farben setzen die Reihe fort", merged[2].color === OKABE_ITO[2] && merged[3].color === OKABE_ITO[3]);
+  c("gesetzte Farben bleiben unangetastet", merged[0].color === "#123456");
+  c("Ersetzen ist derselbe Aufruf mit leerer Grundmenge",
+    appendAssemblages([], incoming).map((x) => x.name).join(",") === "Insula I,Insula IX");
 }
 
 console.log(`\n\x1b[1mErgebnis:\x1b[0m ${pass} bestanden, ${fail} fehlgeschlagen`);

@@ -53,6 +53,7 @@ input,select{font-family:inherit}
 
 .sl{background:var(--bg3);border:1px solid var(--bd2);color:var(--tx2);padding:.4rem .6rem;border-radius:var(--r);font-size:.82rem;cursor:pointer}
 .sl:focus{border-color:var(--accent)}
+a.sl{text-decoration:none;display:inline-flex;align-items:center;gap:.3rem}
 .btn{background:var(--accent);border:1px solid var(--accent);color:#fff;padding:.42rem .9rem;border-radius:var(--r);font-size:.82rem;font-weight:600;transition:background .15s;white-space:nowrap}
 .btn:hover{background:var(--accent2)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -140,6 +141,8 @@ input[type=number],input[type=text],select{background:var(--bg);color:var(--tx);
 input[type=number]:focus-visible,input[type=text]:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 input[type=color]{width:26px;height:22px;padding:0;border:1px solid var(--bd2);border-radius:var(--r);background:none;cursor:pointer}
 .in-xs{width:56px}.in-sm{width:82px}.in-md{width:100%;min-width:120px}
+/* Projektname: Fließtext, nicht Ziffernkolonne — deshalb die Grundschrift zurück. */
+.in-lg{width:100%;max-width:420px;font-family:inherit!important}
 
 .chk{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--tx2);margin:.45rem 0;cursor:pointer}
 .chk input{accent-color:var(--accent)}
@@ -162,6 +165,15 @@ input[type=color]{width:26px;height:22px;padding:0;border:1px solid var(--bd2);b
 .content{flex:1;min-width:0;overflow:auto;padding:1rem 1.3rem 2.5rem}
 .view{display:flex;flex-direction:column;gap:.7rem;max-width:1100px}
 .view-bar{display:flex;flex-wrap:wrap;align-items:center;gap:1.1rem;padding-bottom:.2rem}
+/* Kurvenauswahl: ein Schalter je Kurve, in ihrer Farbe. Ausgeblendete bleiben
+   lesbar — man muss sehen, was man gerade nicht sieht. */
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;margin:.5rem 0 .7rem}
+.chip{display:inline-flex;align-items:center;gap:.35rem;background:var(--bg);border:1px solid var(--bd2);border-radius:999px;padding:.18rem .6rem;font-size:.75rem;color:var(--tx3)}
+.chip.on{background:var(--bg4);color:var(--tx);border-color:var(--bd)}
+.chip:not(.on) .sw{opacity:.3}
+.chip:hover{border-color:var(--accent)}
+.chips .lnk{margin-left:.3rem}
+.tbl tr.off td{opacity:.45}
 .busy{font-size:.74rem;color:var(--tx3);font-family:'JetBrains Mono',monospace}
 .hint{font-size:.72rem;line-height:1.5;color:var(--tx3);max-width:70ch}
 .chart{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r2)}

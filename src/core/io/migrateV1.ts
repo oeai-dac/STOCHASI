@@ -23,6 +23,7 @@
 import type { Assemblage, Category, MarketTable, ProjectV2, SimParams } from "../model.js";
 import { DEFAULT_NOISE, DEFAULT_REPLACEMENT, DEFAULT_RUNS, normalizeTo100 } from "../model.js";
 import { PRESET_V1, centreById } from "../../data/centres.js";
+import { paletteColor } from "../palette.js";
 
 export interface V1Report {
   /** Meldungen über nicht Übernommenes oder Angepasstes. */
@@ -132,14 +133,14 @@ export function migrateV1(data: unknown, name = "STOCHASI-1-Projekt"): V1Result 
     const counts: Record<string, number> = {};
     let total = 0;
     for (const id of ids) { const v = Math.max(0, Math.round(numOr(abs[id], 0))); counts[id] = v; total += v; }
-    if (total > 0) assemblages.push({ id: "A1", name: "Grabungsspektrum", counts });
+    if (total > 0) assemblages.push({ id: "A1", name: "Grabungsspektrum", counts, color: paletteColor(0) });
   } else if (Object.keys(pct).length) {
     // Nur Prozente vorhanden: v1 hat den Stichprobenumfang dann nicht gespeichert.
     // Aus 100 „Stück" zu rechnen wäre eine erfundene Genauigkeit, deshalb ein
     // ausdrücklicher Hinweis statt stiller Annahme.
     const counts: Record<string, number> = {};
     for (const id of ids) counts[id] = Math.round(numOr(pct[id], 0));
-    assemblages.push({ id: "A1", name: "Grabungsspektrum (nur Prozente)", counts });
+    assemblages.push({ id: "A1", name: "Grabungsspektrum (nur Prozente)", counts, color: paletteColor(0) });
     notes.push("Das Grabungsspektrum lag nur als Prozentwerte vor. Die inverse Datierung braucht Stückzahlen — bitte die absoluten Zahlen nachtragen, sonst ist das ausgewiesene Intervall zu eng.");
   }
 
@@ -148,7 +149,7 @@ export function migrateV1(data: unknown, name = "STOCHASI-1-Projekt"): V1Result 
     notes.push("Anzeigeeinstellungen von Version 1 (Deckkraft, Linienstärke, Auto-Normierung) wurden nicht übernommen.");
 
   const project: ProjectV2 = {
-    _meta: { app: "STOCHASI", version: "2.0", created: new Date().toISOString() },
+    _meta: { app: "STOCHASI", version: "2.1", created: new Date().toISOString() },
     name,
     categories,
     market: marketTable,

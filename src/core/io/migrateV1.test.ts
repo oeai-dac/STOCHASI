@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { isV1Config, migrateV1, MigrateError } from "./migrateV1.js";
 import { readProject, writeProject, sanitize, emptyProject, ProjectError } from "./project.js";
 import { PRESET_V1 } from "../../data/centres.js";
+import { OKABE_ITO } from "../palette.js";
 
 let pass = 0, fail = 0; const F: string[] = [];
 function c(n: string, ok: boolean, d = "") { ok ? pass++ : (fail++, F.push(n)); console.log((ok ? "  \x1b[32m✓\x1b[0m " : "  \x1b[31m✗\x1b[0m ") + n + (d ? " — " + d : "")); }
@@ -55,7 +56,7 @@ if (v1raw) {
   c("echte v1-Datei: Vergleichsjahr 170", project.comparisonYear === 170);
   c("echte v1-Datei: Residualität startet bei 0 (rechnet wie v1)", project.params.residual === 0);
   c("echte v1-Datei: keine kategoriespezifischen Raten (rechnet wie v1)", Object.keys(project.params.replacement).length === 0);
-  c("echte v1-Datei: als v2 markiert", project._meta.version === "2.0");
+  c("echte v1-Datei: als v2.1 markiert", project._meta.version === "2.1");
   c("Marktdaten als vorhanden gemeldet", report.hadMarketData && report.hadExcavationData);
   // Rundlauf
   const back = readProject(writeProject(project), "x");
@@ -142,6 +143,26 @@ if (v1raw) {
   c("unbekannte Kategorie im Komplex wird verworfen", p.assemblages[0].counts.Z === undefined);
   c("Vergleichsjahr wird in den Zeitraum gezogen", p.comparisonYear >= p.params.startYear && p.comparisonYear <= p.params.endYear);
   c("Korrekturen werden gemeldet", notes.length >= 4);
+}
+/* ── Farbe je Fundkomplex (Format 2.1) ── */
+{
+  const notes: string[] = [];
+  const p = sanitize({
+    name: "Farben",
+    categories: [{ id: "A", name: "Alpha", color: "#111111" }],
+    market: { years: [100, 200], shares: { A: [100, 100] } },
+    params: { startYear: 100, endYear: 200 },
+    assemblages: [
+      { id: "A1", name: "ohne Farbe", counts: { A: 5 } },
+      { id: "A2", name: "mit Farbe", counts: { A: 5 }, color: "#abcdef" },
+      { id: "A3", name: "Unsinn als Farbe", counts: { A: 5 }, color: "blau" },
+    ],
+  }, "x", notes);
+  c("2.0-Komplexe bekommen eine Palettenfarbe", p.assemblages[0].color === OKABE_ITO[0]);
+  c("eine gespeicherte Farbe bleibt erhalten", p.assemblages[1].color === "#abcdef");
+  c("eine ungültige Farbe wird ersetzt", p.assemblages[2].color === OKABE_ITO[2]);
+  c("die Datei wird als 2.1 geschrieben", JSON.parse(writeProject(p))._meta.version === "2.1");
+  c("der Rundlauf erhält die Farben", readProject(writeProject(p), "x").project.assemblages[1].color === "#abcdef");
 }
 {
   const p = emptyProject(PRESET_V1, "Neu");

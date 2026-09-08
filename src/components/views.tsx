@@ -6,13 +6,14 @@
  */
 import { useMemo, useState } from "react";
 import type { Assemblage, ProjectV2 } from "../core/model.js";
+import { assemblageColor } from "../core/model.js";
 import type { EnsembleStats } from "../sim/simulate.js";
 import type { DatingRow } from "../workers/sim.worker.js";
 import { marketScene, simulationScene, spectrumScene, deviationScene, datingScene, rankScene, residualSeries, paramNote, type DatingSeries, type RankRow } from "../charts/charts.js";
 import { ChartCanvas, usePlotTheme, useWidth } from "./ChartCanvas.js";
 import { useI18n, useT } from "../i18n/I18nContext.js";
-import { yearLabel } from "../charts/plot.js";
-import { hexToRgb } from "../charts/scene.js";
+import { yearLabel, type PlotTheme } from "../charts/plot.js";
+import { hexToRgb, type RGB } from "../charts/scene.js";
 
 export interface ViewProps {
   project: ProjectV2;
@@ -157,58 +158,109 @@ export type DatingMode = "curves" | "ranking";
  * Wird über mehrere Residualanteile gerechnet, ist die belastbare Aussage die
  * Spanne über alle Kurven — nicht das Intervall zu einer einzelnen Annahme.
  */
-export function toRankRow(r: DatingRow): RankRow {
+export function toRankRow(r: DatingRow, color?: RGB): RankRow {
   return {
     label: r.label,
     result: r.curves[0].result,
     span: r.curves.length > 1
       ? [Math.min(...r.curves.map((cu) => cu.result.hdi[0])), Math.max(...r.curves.map((cu) => cu.result.hdi[1]))]
       : undefined,
+    color,
   };
 }
 
-export function DatingView({ project, rows, busy, scan, onScan, mode, onMode }: {
+/** Eine Kurve samt Schlüssel, unter dem sie sich ein- und ausblenden lässt. */
+export interface KeyedSeries extends DatingSeries { key: string; }
+
+export interface DatingModel {
+  /** Alle Kurven, auch die ausgeblendeten — die Chip-Reihe zeigt sie vollständig. */
+  all: KeyedSeries[];
+  /** Die sichtbaren, in der Zeichenreihenfolge. */
+  visible: KeyedSeries[];
+  /** Zeilen des Rangfolge-Diagramms, nur die sichtbaren Fundkomplexe. */
+  rank: RankRow[];
+  hiddenCount: number;
+}
+
+/**
+ * Was im Reiter Datierung gezeichnet wird — an einer Stelle, weil Bildschirm
+ * und Export dieselbe Abbildung zeigen müssen.
+ *
+ * Im Normalfall ist jede Kurve ein Fundkomplex und trägt dessen Farbe. Ist die
+ * Residualschar eingeschaltet, sind die Kurven die Residualanteile eines
+ * einzigen Komplexes; sie leiten sich dann aus dessen Farbe ab.
+ */
+export function datingModel(
+  project: ProjectV2, rows: readonly DatingRow[], scan: boolean, selectedId: string,
+  hidden: Readonly<Record<string, boolean>>, th: PlotTheme,
+): DatingModel {
+  const colorOf = (id: string): RGB => {
+    const i = project.assemblages.findIndex((a) => a.id === id);
+    return hexToRgb(i >= 0 ? assemblageColor(project.assemblages[i], i) : "#a81d26");
+  };
+  const row = rows.find((r) => r.assemblageId === selectedId) ?? rows[0];
+  const all: KeyedSeries[] = scan
+    ? (row ? residualSeries(row.curves, colorOf(row.assemblageId), th).map((s, i) => ({ ...s, key: `r${i}` })) : [])
+    : rows.map((r) => ({
+      key: r.assemblageId,
+      label: `${r.label} (n = ${r.curves[0]?.result.n ?? 0})`,
+      result: r.curves[0].result,
+      color: colorOf(r.assemblageId),
+    }));
+  const visible = all.filter((s) => !hidden[s.key]);
+  const rank = rows.filter((r) => !hidden[r.assemblageId]).map((r) => toRankRow(r, colorOf(r.assemblageId)));
+  return { all, visible, rank, hiddenCount: all.length - visible.length };
+}
+
+/**
+ * Fußnote der Abbildung, um die Zahl der ausgeblendeten Kurven ergänzt.
+ *
+ * Ohne diesen Zusatz könnte eine exportierte Abbildung eine Abfolge behaupten,
+ * die nur dadurch entsteht, dass die widersprechenden Komplexe weggeklickt
+ * wurden. So trägt die Abbildung ihre Einschränkung selbst mit sich.
+ */
+export function datingNote(project: ProjectV2, model: DatingModel, hiddenLabel: (n: number, total: number) => string): string {
+  const base = paramNote(project.params);
+  return model.hiddenCount > 0 ? `${base} · ${hiddenLabel(model.hiddenCount, model.all.length)}` : base;
+}
+
+export function DatingView({ project, rows, busy, scan, onScan, mode, onMode, sel, onSel, hidden, onHidden, markMode, onMarkMode }: {
   project: ProjectV2; rows: DatingRow[]; busy: boolean;
   scan: boolean; onScan: (v: boolean) => void;
   mode: DatingMode; onMode: (m: DatingMode) => void;
+  sel: string; onSel: (id: string) => void;
+  hidden: Record<string, boolean>; onHidden: (h: Record<string, boolean>) => void;
+  markMode: boolean; onMarkMode: (v: boolean) => void;
 }) {
   const { t, lang } = useI18n();
   const th = usePlotTheme();
   const [ref, w] = useWidth<HTMLDivElement>();
-  const [sel, setSel] = useState<string>("");
   const locale = lang === "de" ? "de-AT" : "en-GB";
   const row = rows.find((r) => r.assemblageId === sel) ?? rows[0];
 
-  const series: DatingSeries[] = useMemo(() => {
-    if (!row) return [];
-    const base = hexToRgb("#a81d26");
-    if (scan) return residualSeries(row.curves, base, th);
-    // Ohne Streuung über Residualanteile: eine Kurve je Fundkomplex, damit sich
-    // die Komplexe unmittelbar vergleichen lassen.
-    return rows.map((r, i) => ({
-      label: `${r.label} (n = ${r.curves[0]?.result.n ?? 0})`,
-      result: r.curves[0].result,
-      color: hexToRgb(project.categories[i % project.categories.length]?.color ?? "#a81d26"),
-    }));
-  }, [row, rows, scan, th, project.categories]);
+  const model = useMemo(() => datingModel(project, rows, scan, sel, hidden, th),
+    [project, rows, scan, sel, hidden, th]);
 
   const canRank = rows.filter((r) => !r.curves[0].result.empty).length >= 2;
   const showRanking = mode === "ranking" && canRank;
+  const note = datingNote(project, model, (n, total) => t("dating.hiddenNote", { n, total }));
 
   const scene = useMemo(() => {
     if (showRanking) {
-      return rankScene(rows.map(toRankRow), {
+      return model.rank.length ? rankScene(model.rank, {
         theme: th, width: w, title: t("dating.ranking.title"),
-        overlapLabel: t("dating.ranking.overlapAll"), footnote: paramNote(project.params),
-      });
+        overlapLabel: t("dating.ranking.overlapAll"), footnote: note,
+      }) : null;
     }
-    return series.length ? datingScene(series, {
+    return model.visible.length ? datingScene(model.visible, {
       theme: th, width: w, height: Math.max(340, Math.round(w * 0.48)),
       title: t("dating.title"),
       subtitle: scan && row ? t("dating.subtitle", { name: row.label, n: row.curves[0]?.result.n ?? 0 }) : undefined,
-      footnote: paramNote(project.params),
+      markMode, footnote: note,
     }) : null;
-  }, [showRanking, rows, series, th, w, t, scan, row, project.params]);
+  }, [showRanking, model, th, w, t, scan, row, markMode, note]);
+
+  const setAll = (on: boolean) => onHidden(on ? {} : Object.fromEntries(model.all.map((sr) => [sr.key, true])));
 
   if (!project.assemblages.length) return <div className="view"><Empty text={t("dating.needAssemblage")} /></div>;
   return (
@@ -229,17 +281,46 @@ export function DatingView({ project, rows, busy, scan, onScan, mode, onMode }: 
             <span>{t("dating.residualScan")}</span>
           </label>
         )}
+        {!showRanking && (
+          <label className="chk">
+            <input type="checkbox" checked={markMode} onChange={(e) => onMarkMode(e.target.checked)} />
+            <span>{t("dating.markMode")}</span>
+          </label>
+        )}
         {!showRanking && scan && (
           <label className="fld-inline">
             <span>{t("data.assemblage")}</span>
-            <select value={row?.assemblageId ?? ""} onChange={(e) => setSel(e.target.value)}>
+            <select value={row?.assemblageId ?? ""} onChange={(e) => onSel(e.target.value)}>
               {rows.map((r) => <option key={r.assemblageId} value={r.assemblageId}>{r.label}</option>)}
             </select>
           </label>
         )}
         {busy && <span className="busy">{t("app.loading")}</span>}
       </div>
-      {scene ? <ChartCanvas scene={scene} title={showRanking ? t("dating.ranking.title") : t("dating.title")} /> : <Empty text={t("app.loading")} />}
+
+      {/* Ein- und Ausblenden. Die Chips schalten das, was gerade gezeichnet wird:
+          die Fundkomplexe, oder im Residualmodus die Residualanteile des einen
+          ausgewählten Komplexes. */}
+      {model.all.length > 1 && (
+        <div className="chips" role="group" aria-label={t("dating.visibleCurves")}>
+          {model.all.map((sr) => {
+            const on = !hidden[sr.key];
+            return (
+              <button key={sr.key} className={"chip" + (on ? " on" : "")} aria-pressed={on}
+                onClick={() => onHidden({ ...hidden, [sr.key]: on })}>
+                <span className="sw" style={{ background: `rgb(${sr.color.join(",")})` }} aria-hidden="true" />
+                {sr.label}
+              </button>
+            );
+          })}
+          <button className="lnk" onClick={() => setAll(true)}>{t("dating.showAll")}</button>
+          <button className="lnk" onClick={() => setAll(false)}>{t("dating.showNone")}</button>
+        </div>
+      )}
+
+      {scene
+        ? <ChartCanvas scene={scene} title={showRanking ? t("dating.ranking.title") : t("dating.title")} />
+        : <Empty text={model.all.length ? t("dating.noneVisible") : t("app.loading")} />}
       <p className="hint">
         {showRanking ? t("dating.ranking.help") : scan ? t("dating.residualScanHelp") : t("dating.caveat")}
       </p>
@@ -251,8 +332,8 @@ export function DatingView({ project, rows, busy, scan, onScan, mode, onMode }: 
             <tr>
               <th>{t("data.assemblage")}</th>
               <th className="num">{t("dating.n")}</th>
-              <th className="num">{t("dating.mode")}</th>
-              <th className="num">{t("dating.expected")}</th>
+              <th className="num" title={t("dating.modeHelp")}>{t("dating.mode")}</th>
+              <th className="num" title={t("dating.expectedHelp")}>{t("dating.expected")}</th>
               <th className="num">{t("dating.interval", { level: 95 })}</th>
               <th className="num">{t("dating.width")}</th>
             </tr>
@@ -265,8 +346,12 @@ export function DatingView({ project, rows, busy, scan, onScan, mode, onMode }: 
               const lo = Math.min(...r.curves.map((cu) => cu.result.hdi[0]));
               const hi = Math.max(...r.curves.map((cu) => cu.result.hdi[1]));
               return (
-                <tr key={r.assemblageId} className={r.assemblageId === row?.assemblageId ? "on" : ""}>
-                  <td>{r.label}</td>
+                <tr key={r.assemblageId}
+                  className={(r.assemblageId === row?.assemblageId ? "on" : "") + (hidden[r.assemblageId] ? " off" : "")}>
+                  <td>
+                    <span className="sw" style={{ background: assemblageColor(asmOf(project, r.assemblageId), idxOf(project, r.assemblageId)) }} aria-hidden="true" />
+                    {" "}{r.label}
+                  </td>
                   <td className="num">{res.n.toLocaleString(locale)}</td>
                   <td className="num">{res.empty ? "—" : yearLabel(res.mode)}</td>
                   <td className="num">{res.empty ? "—" : yearLabel(Math.round(res.expected))}</td>
@@ -283,4 +368,12 @@ export function DatingView({ project, rows, busy, scan, onScan, mode, onMode }: 
       )}
     </div>
   );
+}
+
+/** Fundkomplex zu einer Kennung; für die Farbe in der Übersichtstabelle. */
+function idxOf(project: ProjectV2, id: string): number {
+  return project.assemblages.findIndex((a) => a.id === id);
+}
+function asmOf(project: ProjectV2, id: string): Assemblage {
+  return project.assemblages.find((a) => a.id === id) ?? { id, name: id, counts: {} };
 }

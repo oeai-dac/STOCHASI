@@ -120,6 +120,23 @@ for (const [name, sc] of scenes) {
   c("residualSeries beschriftet die Anteile", s[0].label.includes("0 %") && s[1].label.includes("20 %"));
   c("residualSeries unterscheidet die Linien", s[0].dash === undefined && Array.isArray(s[1].dash));
 }
+/* ── Modus-Linien: eine je sichtbarer Kurve, Text nur bei einer einzigen ── */
+{
+  const one = { label: "a", result: dateAssemblage(E, observed.counts), color: [168, 29, 38] as [number, number, number] };
+  const two = { label: "b", result: dateAssemblage(E, { ...observed.counts, RZ: 40 }), color: [0, 114, 178] as [number, number, number] };
+  const vlines = (sc: ReturnType<typeof datingScene>) =>
+    sc.paths.filter((p) => p.dash && p.pts.length === 4 && p.pts[0] === p.pts[2]);
+  c("eine Kurve: eine Modus-Linie", vlines(datingScene([one])).length === 1);
+  c("zwei Kurven: zwei Modus-Linien", vlines(datingScene([one, two])).length === 2);
+  c("die Linie trägt die Farbe ihrer Kurve",
+    vlines(datingScene([one, two])).some((p) => p.stroke?.[2] === 178));
+  c("bei mehreren Kurven bleibt die Textzeile weg",
+    !datingScene([one, two]).texts.some((t) => t.s.includes("95 %")));
+  c("Modus-Linien lassen sich abschalten", vlines(datingScene([one, two], { markMode: false })).length === 0);
+  c("abgeschaltet bleibt auch die Textzeile weg",
+    !datingScene([one], { markMode: false }).texts.some((t) => t.s.includes("95 %")));
+}
+
 c("paramNote nennt Rate, Streuung und Läufe",
   paramNote(params).includes("12 %") && paramNote(params).includes("60 Läufe") && paramNote({ ...params, residual: 0.2 }).includes("Residualität"));
 c("paramNote kennzeichnet den zufälligen Seed", paramNote({ ...params, seed: 0 }).includes("zufällig"));
@@ -195,6 +212,14 @@ c("helles und dunkles Schema unterscheiden sich", LIGHT.bg[0] !== DARK.bg[0]);
   const bars = sc.rects.slice(0, 3).map((r) => r.x);
   c("Rangfolge: früher Komplex liegt links", Math.min(...bars) === sc.rects[0].x);
   c("Rangfolge: PDF gültig", new TextDecoder("latin1").decode(sceneToPDF(sc)).trimEnd().endsWith("%%EOF"));
+  // Farbpunkt vor der Beschriftung: je Zeile ein Rechteck mehr, links vom Text
+  const dotted = rankScene(rows.map((r, i) => ({ ...r, color: [i * 10, 114, 178] as [number, number, number] })), { title: "Rangfolge", width: 900 });
+  c("Rangfolge: Farbpunkt je Zeile", dotted.rects.length === sc.rects.length + rows.length);
+  c("Rangfolge: der Punkt steht links neben der Beschriftung", (() => {
+    const label = dotted.texts.find((t) => t.s.startsWith(rows[0].label))!;
+    return dotted.rects.some((r) => r.w === 8 && r.h === 8 && r.x < label.x && Math.abs(r.y + 4 - label.y) < 8);
+  })());
+  c("Rangfolge: ohne Farbe kein Punkt", sc.rects.every((r) => !(r.w === 8 && r.h === 8)));
 }
 {
   // Gut getrennte Komplexe: kein Jahr passt zu allen, also kein Schnittband.

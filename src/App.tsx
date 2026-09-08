@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./theme.css";
-import type { ProjectV2, SimParams } from "./core/model.js";
+import type { Assemblage, Category, ProjectV2, SimParams } from "./core/model.js";
+import { appendAssemblages } from "./core/model.js";
 import type { EnsembleStats } from "./sim/simulate.js";
 import { emptyProject, readProject, ProjectError } from "./core/io/project.js";
 import { detectKind, importMarketGrid, importAssemblageGrid, ImportError } from "./core/io/importTable.js";
@@ -10,7 +11,7 @@ import { PRESET_V1, centreById } from "./data/centres.js";
 import { DEMO } from "./data/demo.js";
 import { Shell, type TabId } from "./components/Shell.js";
 import { Sidebar } from "./components/Sidebar.js";
-import { MarketView, SimView, YearView, CompareView, DatingView, toRankRow, type DatingMode } from "./components/views.js";
+import { MarketView, SimView, YearView, CompareView, DatingView, datingModel, datingNote, type DatingMode } from "./components/views.js";
 import { DataView } from "./components/DataView.js";
 import { ExportMenu, type ExportPayload } from "./components/ExportMenu.js";
 import { simClient, isAbort } from "./workers/simClient.js";
@@ -18,9 +19,8 @@ import type { DatingRow } from "./workers/sim.worker.js";
 import { saveAutosave, loadAutosave, clearAutosave, type AutosaveRecord } from "./core/autosave.js";
 import { buildShareUrl, readShareFromHash } from "./core/shareLink.js";
 import { useI18n } from "./i18n/I18nContext.js";
-import { marketScene, simulationScene, spectrumScene, deviationScene, datingScene, rankScene, residualSeries, paramNote } from "./charts/charts.js";
+import { marketScene, simulationScene, spectrumScene, deviationScene, datingScene, rankScene, paramNote } from "./charts/charts.js";
 import { LIGHT } from "./charts/plot.js";
-import { hexToRgb } from "./charts/scene.js";
 import { simulationAoa, marketAoa, assemblagesAoa, datingCurvesAoa, datingSummaryAoa, parametersAoa } from "./export/exportTable.js";
 
 /** Residualanteile der Vergleichsschar. */
@@ -35,12 +35,18 @@ export default function App() {
   const [rows, setRows] = useState<DatingRow[]>([]);
   const [scan, setScan] = useState(false);
   const [datingMode, setDatingMode] = useState<DatingMode>("curves");
+  const [datingSel, setDatingSel] = useState("");
+  /* Ausgeblendete Kurven. Nur für die Sitzung — in einer weitergegebenen
+     Projektdatei stünde sonst eine unsichtbare Auswahl. */
+  const [hidden, setHidden] = useState<Record<string, boolean>>({});
+  const [markMode, setMarkMode] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [restore, setRestore] = useState<AutosaveRecord | null>(null);
+  const [imported, setImported] = useState<PendingImport | null>(null);
   const [installEvt, setInstallEvt] = useState<{ prompt: () => Promise<unknown> } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const projectRef = useRef<ProjectV2 | null>(null); projectRef.current = project;
@@ -142,8 +148,24 @@ export default function App() {
     catch { location.hash = url.slice(url.indexOf("#") + 1); setToast(t("share.copyManual")); }
   }
 
+  /**
+   * Fundkomplexe aus einem Import einsetzen — ersetzend oder anhängend.
+   *
+   * Die geladenen Komplexe werden ohne Farbe vorgehalten; erst hier bekommen sie
+   * eine, denn beim Anhängen muss die Palette die vorhandene Reihe fortsetzen
+   * statt bei Blau von vorne zu beginnen.
+   */
+  const applyImport = useCallback((p: PendingImport, mode: PendingImport["mode"]) => {
+    setImported({ ...p, mode });
+    dirtyRef.current = true;
+    setProject((prev) => (prev ? {
+      ...prev,
+      assemblages: appendAssemblages(mode === "append" ? p.previous : [], p.incoming),
+    } : prev));
+  }, []);
+
   async function loadFile(file: File) {
-    setError(null); setNotes([]);
+    setError(null); setNotes([]); setImported(null);
     const name = file.name.replace(/\.[^.]+$/, "");
     try {
       if (/\.json$/i.test(file.name)) {
@@ -159,12 +181,7 @@ export default function App() {
       if (detectKind(grid) === "market") {
         const r = importMarketGrid(grid);
         // Kategorien aus der Datei ergänzen, damit die Spalten nicht ins Leere laufen
-        const known = new Set(base.categories.map((c) => c.id));
-        const added = r.ids.filter((id) => !known.has(id));
-        const categories = [...base.categories, ...added.map((id, i) => {
-          const c = centreById(id);
-          return { id, name: c?.name ?? id, color: c?.color ?? FALLBACK[i % FALLBACK.length], group: c?.group };
-        })];
+        const { categories, added } = withNewCategories(base.categories, r.ids);
         const initial = { ...base.params.initial };
         for (const id of added) initial[id] = 0;
         setProject({
@@ -176,11 +193,30 @@ export default function App() {
         setTab("market");
       } else {
         const r = importAssemblageGrid(grid, { known: base.categories.map((c) => c.id), defaultName: name });
+        // Spalten, die keiner Kategorie des Projekts entsprechen, würden sonst
+        // stillschweigend wegfallen — und die Datierung liefe mit einem zu
+        // kleinen N, ohne dass es jemand merkt. Also anlegen und melden.
+        const { categories, added } = withNewCategories(base.categories, r.ids);
+        const ids = categories.map((c) => c.id);
+        const initial = { ...base.params.initial };
+        const shares = { ...base.market.shares };
+        for (const id of added) { initial[id] = 0; shares[id] = base.market.years.map(() => 0); }
+        const incoming: Assemblage[] = r.assemblages.map((a) => ({
+          ...a, color: undefined, counts: Object.fromEntries(ids.map((id) => [id, a.counts[id] ?? 0])),
+        }));
+        const previous = base.assemblages.map((a) => ({
+          ...a, counts: Object.fromEntries(ids.map((id) => [id, a.counts[id] ?? 0])),
+        }));
         setProject({
-          ...base,
-          assemblages: r.assemblages.map((a) => ({ ...a, counts: Object.fromEntries(base.categories.map((c) => [c.id, a.counts[c.id] ?? 0])) })),
+          ...base, name: base.name === DEMO_NAME ? name : base.name,
+          categories, market: { ...base.market, shares }, params: { ...base.params, initial },
+          assemblages: appendAssemblages([], incoming),
         });
-        setNotes([...r.warnings, ...(r.transposed ? [t("import.transposed")] : [])]);
+        setNotes([...r.warnings, ...(r.transposed ? [t("import.transposed")] : []),
+          ...(added.length ? [t("import.newCategories", { n: added.length })] : [])]);
+        // Waren schon Komplexe da, wird ersetzt — aber sichtbar, mit der Wahl,
+        // stattdessen anzuhängen.
+        if (previous.length) setImported({ incoming, previous, mode: "replace" });
         setTab("dating");
       }
       dirtyRef.current = true;
@@ -221,16 +257,19 @@ export default function App() {
           sheets: [{ name: "Fundkomplexe", aoa: assemblagesAoa(project.assemblages, project.categories) }, params],
         };
       case "dating": {
-        const flat = rows.map((r) => ({ label: r.label, result: r.curves[0].result }));
         const ranking = datingMode === "ranking" && rows.filter((r) => !r.curves[0].result.empty).length >= 2;
-        const series = scan && rows[0]
-          ? residualSeries(rows[0].curves, hexToRgb("#a81d26"), LIGHT)
-          : rows.map((r, i) => ({ label: `${r.label} (n = ${r.curves[0].result.n})`, result: r.curves[0].result, color: hexToRgb(project.categories[i % project.categories.length]?.color ?? "#a81d26") }));
-        // Exportiert wird, was auf dem Bildschirm steht — sonst bekäme man eine
-        // Abbildung, die man vorher nicht geprüft hat.
+        const model = datingModel(project, rows, scan, datingSel, hidden, LIGHT);
+        const note = datingNote(project, model, (n, total) => t("dating.hiddenNote", { n, total }));
+        // Exportiert wird die Abbildung, die auf dem Bildschirm steht — samt der
+        // Fußnote, die ausgeblendete Kurven ausweist. Die Tabellen daneben
+        // bleiben vollständig; sie sind der Anhang zum Nachrechnen.
         const scene = ranking
-          ? rankScene(rows.map(toRankRow), { ...opt, title: t("dating.ranking.title"), overlapLabel: t("dating.ranking.overlapAll") })
-          : series.length ? datingScene(series, { ...opt, height: 480, title: t("dating.title") }) : null;
+          ? (model.rank.length ? rankScene(model.rank, { ...opt, footnote: note, title: t("dating.ranking.title"), overlapLabel: t("dating.ranking.overlapAll") }) : null)
+          : model.visible.length ? datingScene(model.visible, { ...opt, footnote: note, height: 480, title: t("dating.title"), markMode }) : null;
+        const flat = rows.map((r) => ({
+          label: r.label, result: r.curves[0].result,
+          shown: scan ? true : !hidden[r.assemblageId],
+        }));
         return {
           scene,
           viewName: ranking ? "rangfolge" : "datierung",
@@ -247,7 +286,7 @@ export default function App() {
           ],
         };
     }
-  }, [project, tab, ensemble, rows, scan, datingMode, t]);
+  }, [project, tab, ensemble, rows, scan, datingMode, datingSel, hidden, markMode, t]);
 
   return (
     <>
@@ -273,6 +312,20 @@ export default function App() {
                 </div>
               </div>
             )}
+            {imported && (
+              <div className="restore-bar" role="region" aria-label={t("import.title")}>
+                <span>{t("import.loadedAssemblages", { n: imported.incoming.length })}</span>
+                <div className="restore-actions">
+                  <div className="seg" role="group" aria-label={t("import.title")}>
+                    <button className={"seg-b" + (imported.mode === "replace" ? " on" : "")} aria-pressed={imported.mode === "replace"}
+                      onClick={() => applyImport(imported, "replace")}>{t("import.replaceExisting")}</button>
+                    <button className={"seg-b" + (imported.mode === "append" ? " on" : "")} aria-pressed={imported.mode === "append"}
+                      onClick={() => applyImport(imported, "append")}>{t("import.appendExisting")}</button>
+                  </div>
+                  <button className="btn btn-ghost" onClick={() => setImported(null)}>{t("common.close")}</button>
+                </div>
+              </div>
+            )}
             {error && <div className="msg err" role="alert">{error}</div>}
             {notes.length > 0 && (
               <div className="msg note" role="status">
@@ -286,7 +339,9 @@ export default function App() {
                 : tab === "sim" ? <SimView project={project} ensemble={ensemble} busy={busy} />
                   : tab === "year" ? <YearView project={project} ensemble={ensemble} busy={busy} />
                     : tab === "compare" ? <CompareView project={project} ensemble={ensemble} busy={busy} />
-                      : tab === "dating" ? <DatingView project={project} rows={rows} busy={busy} scan={scan} onScan={setScan} mode={datingMode} onMode={setDatingMode} />
+                      : tab === "dating" ? <DatingView project={project} rows={rows} busy={busy} scan={scan} onScan={setScan}
+                        mode={datingMode} onMode={setDatingMode} sel={datingSel} onSel={setDatingSel}
+                        hidden={hidden} onHidden={setHidden} markMode={markMode} onMarkMode={setMarkMode} />
                         : <DataView project={project} onProject={updateProject} />
             )}
           </main>
@@ -305,3 +360,26 @@ export default function App() {
 }
 
 const FALLBACK = ["#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#008080"];
+
+/** Ein Fundkomplex-Import, solange die Wahl zwischen Ersetzen und Anhängen offensteht. */
+interface PendingImport {
+  /** Die geladenen Komplexe, noch ohne Farbe. */
+  incoming: Assemblage[];
+  /** Die Komplexe, die vor dem Import im Projekt standen. */
+  previous: Assemblage[];
+  mode: "replace" | "append";
+}
+
+/**
+ * Kategorien der Datei ergänzen, die das Projekt noch nicht kennt.
+ * Name und Farbe kommen aus der Referenzliste, sonst aus der Ersatzpalette.
+ */
+function withNewCategories(existing: readonly Category[], ids: readonly string[]): { categories: Category[]; added: string[] } {
+  const known = new Set(existing.map((c) => c.id));
+  const added = ids.filter((id) => !known.has(id));
+  const categories = [...existing, ...added.map((id, i) => {
+    const c = centreById(id);
+    return { id, name: c?.name ?? id, color: c?.color ?? FALLBACK[(existing.length + i) % FALLBACK.length], group: c?.group };
+  })];
+  return { categories, added };
+}

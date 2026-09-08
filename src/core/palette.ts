@@ -88,17 +88,26 @@ export function deltaE(a: string, b: string): number {
 }
 
 /* ── Palette zuweisen & Ununterscheidbarkeit prüfen ── */
+/**
+ * Die i-te Farbe der Palette, zyklisch.
+ *
+ * Über die neun Grundfarben hinaus wird die Basisfarbe je Umlauf abgedunkelt.
+ * Das ist keine gute Lösung für zwanzig Reihen in einem Diagramm — die gibt es
+ * nicht —, aber es liefert verschiedene Farben statt derselben neun noch einmal.
+ */
+export function paletteColor(i: number): string {
+  const k = ((i % OKABE_ITO.length) + OKABE_ITO.length) % OKABE_ITO.length;
+  const round = Math.max(0, Math.floor(i / OKABE_ITO.length));
+  if (round === 0) return OKABE_ITO[k];
+  const f = 1 - 0.22 * round;
+  const [r, g, b] = hexToRgb(OKABE_ITO[k]);
+  return rgbToHex(r * f, g * f, b * f);
+}
+
 /** Weist jeder Gruppe eine CVD-sichere Farbe zu (zyklisch, mit Helligkeits-Variation ab 9). */
 export function assignCvdSafePalette(groups: string[]): Record<string, string> {
   const out: Record<string, string> = {};
-  groups.forEach((g, i) => {
-    if (i < OKABE_ITO.length) { out[g] = OKABE_ITO[i]; return; }
-    // Über 9 Gruppen hinaus: Basisfarbe leicht abdunkeln/aufhellen, damit sie neu wirkt.
-    const base = OKABE_ITO[i % OKABE_ITO.length];
-    const f = 1 - 0.22 * (1 + Math.floor(i / OKABE_ITO.length));
-    const [r, gg, b] = hexToRgb(base);
-    out[g] = rgbToHex(r * f, gg * f, b * f);
-  });
+  groups.forEach((g, i) => { out[g] = paletteColor(i); });
   return out;
 }
 

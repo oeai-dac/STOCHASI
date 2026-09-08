@@ -7,7 +7,8 @@
  */
 import { useMemo, useState } from "react";
 import type { Assemblage, Category, ProjectV2 } from "../core/model.js";
-import { normalizeTo100 } from "../core/model.js";
+import { assemblageColor, normalizeTo100 } from "../core/model.js";
+import { paletteColor } from "../core/palette.js";
 import { CENTRES, centresByGroup, type Centre } from "../data/centres.js";
 import { useI18n, useT } from "../i18n/I18nContext.js";
 import { yearLabel } from "../charts/plot.js";
@@ -16,11 +17,28 @@ export function DataView({ project, onProject }: { project: ProjectV2; onProject
   const t = useT();
   return (
     <div className="view data-view">
+      <ProjectPanel project={project} onProject={onProject} />
       <CategoryPanel project={project} onProject={onProject} />
       <MarketPanel project={project} onProject={onProject} />
       <AssemblagePanel project={project} onProject={onProject} />
       <p className="hint">{t("data.countsHelp")}</p>
     </div>
+  );
+}
+
+/* ── Projekt ── */
+function ProjectPanel({ project, onProject }: { project: ProjectV2; onProject: (p: ProjectV2) => void }) {
+  const t = useT();
+  return (
+    <section className="panel">
+      <h2>{t("data.project")}</h2>
+      <label className="fld-num">
+        <span>{t("data.projectName")}</span>
+        <input className="in-lg" value={project.name} placeholder={t("data.projectNamePlaceholder")}
+          onChange={(e) => onProject({ ...project, name: e.target.value })} aria-label={t("data.projectName")} />
+      </label>
+      <p className="fld-help">{t("data.projectNameHelp")}</p>
+    </section>
   );
 }
 
@@ -261,6 +279,7 @@ function AssemblagePanel({ project, onProject }: { project: ProjectV2; onProject
     setAsm([...project.assemblages, {
       id: `A${Date.now().toString(36)}`, name: `${t("data.assemblage")} ${n}`,
       counts: Object.fromEntries(ids.map((id) => [id, 0])),
+      color: paletteColor(project.assemblages.length),
     }]);
   }
 
@@ -273,6 +292,7 @@ function AssemblagePanel({ project, onProject }: { project: ProjectV2; onProject
           <table className="tbl asm">
             <thead>
               <tr>
+                <th>{t("cat.color")}</th>
                 <th>{t("data.assemblage")}</th>
                 {project.categories.map((c) => (
                   <th key={c.id} className="num" title={c.name}>
@@ -284,10 +304,13 @@ function AssemblagePanel({ project, onProject }: { project: ProjectV2; onProject
               </tr>
             </thead>
             <tbody>
-              {project.assemblages.map((a) => {
+              {project.assemblages.map((a, i) => {
                 const total = ids.reduce((s, id) => s + (a.counts[id] ?? 0), 0);
                 return (
                   <tr key={a.id}>
+                    <td><input type="color" value={assemblageColor(a, i)}
+                      onChange={(e) => setAsm(project.assemblages.map((x) => (x.id === a.id ? { ...x, color: e.target.value } : x)))}
+                      aria-label={`${t("cat.color")} ${a.name}`} /></td>
                     <td><input className="in-md" value={a.name}
                       onChange={(e) => setAsm(project.assemblages.map((x) => (x.id === a.id ? { ...x, name: e.target.value } : x)))}
                       aria-label={t("data.assemblage")} /></td>

@@ -1,4 +1,4 @@
-import { OKABE_ITO, contrastRatio, relativeLuminance, simulateCVD, deltaE, assignCvdSafePalette, indistinctPairs } from "./palette.js";
+import { OKABE_ITO, contrastRatio, relativeLuminance, simulateCVD, deltaE, assignCvdSafePalette, paletteColor, indistinctPairs } from "./palette.js";
 
 let pass = 0, fail = 0; const F: string[] = [];
 function c(n: string, ok: boolean, d = "") { ok ? pass++ : (fail++, F.push(n)); console.log((ok ? "  \x1b[32m✓\x1b[0m " : "  \x1b[31m✗\x1b[0m ") + n + (d ? " — " + d : "")); }
@@ -59,6 +59,13 @@ c("Weiß heller als Schwarz (Luminanz)", relativeLuminance("#ffffff") > relative
 {
   const pair = { a: "#D55E00", b: "#E06010" };
   c("nahe Farben werden als ununterscheidbar gemeldet", indistinctPairs(pair, null, 12).length === 1);
+}
+
+// ── paletteColor ──
+{
+  c("die ersten neun Farben sind die Palette selbst", OKABE_ITO.every((h, i) => paletteColor(i) === h));
+  c("darüber hinaus wird abgedunkelt statt wiederholt", paletteColor(9) !== OKABE_ITO[0] && paletteColor(18) !== paletteColor(9));
+  c("jede Farbe ist ein gültiger Hexwert", [0, 5, 9, 17, 26].every((i) => /^#[0-9a-f]{6}$/i.test(paletteColor(i))));
 }
 
 console.log(`\n\x1b[1mErgebnis:\x1b[0m ${pass} bestanden, ${fail} fehlgeschlagen`);

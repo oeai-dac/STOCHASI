@@ -83,9 +83,16 @@ export function datingCurvesAoa(results: ReadonlyArray<{ label: string; result: 
 }
 
 /* ── Datierung: Übersicht je Fundkomplex ── */
-export function datingSummaryAoa(results: ReadonlyArray<{ label: string; result: DatingResult }>): Aoa {
-  const rows: Aoa = [["Fundkomplex", "n", "Modus", "Erwartungswert", "Intervall von", "Intervall bis", "Intervallbreite", "Niveau", "Verfahren", "Kategorien im Komplex"]];
-  for (const { label, result: r } of results) {
+/**
+ * Übersicht der Datierungen.
+ *
+ * Die Tabelle bleibt vollständig, auch wenn im Diagramm Kurven ausgeblendet
+ * sind: Die Abbildung ist eine Aussage, die Tabelle der Anhang, in dem jemand
+ * nachrechnet. Die Spalte „im Diagramm" hält beides zusammen.
+ */
+export function datingSummaryAoa(results: ReadonlyArray<{ label: string; result: DatingResult; shown?: boolean }>): Aoa {
+  const rows: Aoa = [["Fundkomplex", "n", "Modus", "Erwartungswert", "Intervall von", "Intervall bis", "Intervallbreite", "Niveau", "Verfahren", "Kategorien im Komplex", "im Diagramm"]];
+  for (const { label, result: r, shown } of results) {
     rows.push([
       label, r.n,
       r.empty ? "" : r.mode,
@@ -94,6 +101,7 @@ export function datingSummaryAoa(results: ReadonlyArray<{ label: string; result:
       r.empty ? "" : r.hdi[1],
       r.empty ? "" : r.hdi[1] - r.hdi[0],
       r.level, r.method, r.usedIds.join(" "),
+      shown === false ? "nein" : "ja",
     ]);
   }
   return rows;

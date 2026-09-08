@@ -7,7 +7,8 @@ MIT licence · © Christian Gugl / Austrian Archaeological Institute (ÖAW)
 
 This is the reference document. For a first orientation, read the
 [Quick Start Guide](QUICKSTART.md) instead — it takes ten minutes and covers the
-normal working cycle.
+normal working cycle. A German version of that guide is
+[QUICKSTART.de.md](QUICKSTART.de.md).
 
 ---
 
@@ -387,7 +388,10 @@ A project consists of:
 σ, residual share, number of runs, seed, new-foundation flag, initial
 distribution.
 
-**Assemblages** — name and counts per category.
+**Assemblages** — name, counts per category, and a colour. The colour belongs to
+the assemblage, not to a category: it is the colour of its dating curve, of the
+dot in the ranking view, and the base for the residual family drawn from it. New
+assemblages take the next colour of a colour-vision-safe palette.
 
 **Comparison year** — the year used by the Year spectrum and Comparison views.
 
@@ -400,11 +404,11 @@ can be reproduced exactly.
 
 ### 9.1 Project file (`*.stochasi.json`)
 
-JSON with `_meta.app = "STOCHASI"` and `_meta.version = "2.0"`.
+JSON with `_meta.app = "STOCHASI"` and `_meta.version = "2.1"`.
 
 ```json
 {
-  "_meta": { "app": "STOCHASI", "version": "2.0", "created": "2026-08-31T…" },
+  "_meta": { "app": "STOCHASI", "version": "2.1", "created": "2026-08-31T…" },
   "name": "Flavia Solva, Insula XLI",
   "categories": [
     { "id": "MG", "name": "Central Gaulish", "color": "#228B22", "group": "Central Gaulish" }
@@ -417,7 +421,7 @@ JSON with `_meta.app = "STOCHASI"` and `_meta.version = "2.0"`.
     "settlementMode": false,
     "initial": { "MG": 0 }
   },
-  "assemblages": [{ "id": "A1", "name": "Insula XLI", "counts": { "MG": 56 } }],
+  "assemblages": [{ "id": "A1", "name": "Insula XLI", "counts": { "MG": 56 }, "color": "#0072B2" }],
   "comparisonYear": 170
 }
 ```
@@ -427,6 +431,12 @@ colours become grey, negative shares become zero, out-of-range parameters are
 clamped, an end year before the start year is corrected, and assemblages with no
 finds are skipped. Every correction is reported in the interface rather than
 applied silently.
+
+Version 2.1 added `color` on the assemblage. Files written by 2.0 have no such
+field; each assemblage then takes a colour from the palette by position, so an
+older project looks right the moment it is opened. Version 2.0 reads a 2.1 file
+without complaint and ignores the field, which costs the colours and nothing
+else.
 
 ### 9.2 Market table (CSV, TSV, XLSX)
 
@@ -636,9 +646,26 @@ when most of them are within the range the model itself considers ordinary.
 Two views of the same computation, switched at the top left.
 
 **Curves.** The posterior over the years, with the 95 % interval shaded and the
-mode marked. Unticked, one curve per assemblage — the direct comparison between
-contexts. Ticked (*Compute across several residual shares*), four curves for one
-assemblage at 0, 10, 20 and 30 % residuality.
+mode marked. Unticked, one curve per assemblage in that assemblage's own colour
+— the direct comparison between contexts. Ticked (*Compute across several
+residual shares*), four curves for one assemblage at 0, 10, 20 and 30 %
+residuality, derived from its colour.
+
+*Mode lines.* Each visible curve carries a dashed vertical at its most likely
+year, in the colour of the curve. The label with year and interval is drawn only
+when a single curve is visible; with seven assemblages, seven labels would sit
+on top of one another. The tickbox *Mode lines* turns the whole set off.
+
+*Showing and hiding curves.* A row of buttons above the figure, one per curve,
+with *All* and *None* beside them. What they switch is whatever is currently
+drawn: the assemblages, or the four residual shares when the scan is on. Hidden
+curves stay in the table below, only faint. The selection lives for the session
+and is not written to the project file.
+
+Hiding has a sharp edge, and the program is built to blunt it: click away the
+two assemblages that spoil a ranking and you have a figure claiming a sequence
+the data do not support. The footnote of every figure therefore names the number
+of hidden curves, and it travels into the export with it.
 
 **Ranking.** The assemblages sorted by estimated date, each with an interval bar
 and a tick at the most likely year. This is where several contexts turn into a
@@ -651,7 +678,13 @@ small samples they will overlap almost completely and support no order at all.
 STOCHASI therefore computes the **intersection of all the intervals**. If it is
 non-empty — if some single year is consistent with every assemblage — that range
 is shaded behind the bars and labelled. Seeing that band means the ordering in
-front of you is an artefact of sorting, not a finding.
+front of you is an artefact of sorting, not a finding. The intersection is
+computed over the visible rows, which is the second reason the footnote counts
+what is hidden.
+
+Each row carries a dot in the colour of its assemblage, linking it to the curve
+view. The bars themselves stay one colour, because there paleness already means
+something else.
 
 Assemblages below 30 finds are drawn in a paler tone, and the ranking is
 disabled below two usable assemblages. With the residual scan on, the bars show
@@ -660,6 +693,10 @@ assumption.
 
 Below both views, a table across all assemblages: sample size, mode, expected
 value, interval and width — likewise using the wider span when the scan is on.
+The mode is the highest point of the curve; the expected value is its centre of
+mass, which parts from the mode when the curve is skewed and additionally
+depends on the chosen period, because the curve is cut off at its edges. Report
+the mode with its interval. Both column headings carry this as a tooltip.
 
 A warning appears when any assemblage has fewer than 30 finds. It says the
 interval is wide because the evidence is thin, not because the computation is
@@ -667,9 +704,14 @@ being timid.
 
 ### 11.7 Data
 
-Categories (code, name, colour; the code can be renamed and the change
-propagates through market curve, initial values, rates and all assemblages), the
-market curve at its reference years, and the assemblage counts.
+The project name, categories (code, name, colour; the code can be renamed and
+the change propagates through market curve, initial values, rates and all
+assemblages), the market curve at its reference years, and the assemblage counts
+with their colours.
+
+The project name appears in the header and in every exported file. Loading a
+table takes over the file name only while the name is still that of the example
+dataset, so a name you typed is never overwritten by an import.
 
 The sum column in the market table doubles as a *normalise this row* button. It
 turns red only when the row actually departs from 100.
@@ -728,13 +770,17 @@ document alone.
   years are reference years.
 - **Assemblages** — one row per assemblage, counts per category, with totals.
 - **Dating (overview)** — per assemblage: N, mode, expected value, interval,
-  width, level, method, and which categories were actually present.
+  width, level, method, which categories were actually present, and whether the
+  assemblage is shown in the figure. The table stays complete even when curves
+  are hidden: the figure is the statement, the table the appendix somebody
+  recomputes from, and the last column holds the two together.
 - **Dating (curves)** — one row per year, one column per assemblage, giving the
   posterior probability. Sums to 1 down each column.
 
 The image export always follows the view you are looking at: with *Ranking*
-selected you get the ranking figure, otherwise the curves. Exporting a figure
-you have not seen would rather defeat the purpose of looking at it first.
+selected you get the ranking figure, otherwise the curves, and in both cases
+only the curves left visible. Exporting a figure you have not seen would rather
+defeat the purpose of looking at it first.
 
 ---
 
@@ -759,7 +805,7 @@ A defensible figure caption looks roughly like this:
 
 > Simulated stock in circulation, Insula XLI. Market curve after [reference],
 > replacement rate 10 %/year, σ = 2, 200 runs, seed 42, residual share 0.
-> STOCHASI 2.0.1.
+> STOCHASI 2.1.0.
 
 ---
 

@@ -204,7 +204,8 @@ const DATA = {
         "BA": 1,
         "MG": 56,
         "RZ": 10
-      }
+      },
+      "color": "#0072B2"
     }
   ],
   "comparisonYear": 170
@@ -213,7 +214,7 @@ const DATA = {
 /** Neue Instanz — der Datensatz wird in der Oberfläche bearbeitet. */
 export function DEMO(): ProjectV2 {
   return {
-    _meta: { app: "STOCHASI", version: "2.0", created: new Date().toISOString() },
+    _meta: { app: "STOCHASI", version: "2.1", created: new Date().toISOString() },
     name: "Flavia-Solva-Beispiel",
     ...structuredClone(DATA as unknown as Omit<ProjectV2, "_meta" | "name">),
   };
