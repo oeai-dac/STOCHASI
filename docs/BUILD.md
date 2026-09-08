@@ -122,7 +122,7 @@ Sobald Zertifikate vorliegen, genügt es, die Secrets in der CI zu hinterlegen
 ## Veröffentlichen
 
 ```bash
-npm version 2.0.2        # hebt package.json und legt den Tag v2.0.2 an
+npm version 2.1.1        # hebt package.json und legt den Tag v2.1.1 an
 git push --follow-tags
 ```
 
