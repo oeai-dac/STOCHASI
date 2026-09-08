@@ -45,9 +45,9 @@ jobs:
             command: npm run dist:mac -- --publish never
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -84,7 +84,7 @@ jobs:
       # Auto-Update. Am Release hingen sie nur als erklärungsbedürftiger Ballast
       # neben den Paketen.
       - name: Pakete als Artefakt sichern
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pakete-${{ matrix.os }}
           retention-days: 7
@@ -115,7 +115,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pakete-ubuntu-latest
           path: pakete
@@ -138,7 +138,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pakete-ubuntu-latest
           path: pakete
@@ -169,7 +169,7 @@ jobs:
       image: fedora:latest
       options: --security-opt seccomp=unconfined --cap-add SYS_ADMIN
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pakete-ubuntu-latest
           path: pakete
@@ -199,7 +199,7 @@ jobs:
     needs: build
     runs-on: windows-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pakete-windows-latest
           path: pakete
@@ -242,7 +242,7 @@ jobs:
     needs: build
     runs-on: macos-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pakete-macos-latest
           path: pakete
@@ -264,7 +264,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Alle Pakete herunterladen
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: pakete
           merge-multiple: true
@@ -273,7 +273,7 @@ jobs:
         run: ls -lh pakete
 
       - name: Entwurf mit angehängten Dateien
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           generate_release_notes: true
